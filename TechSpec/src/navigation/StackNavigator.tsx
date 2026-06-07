@@ -6,7 +6,7 @@ import { useTheme } from "../context/ThemeContext";
 
 import LoginScreen    from "../screens/LoginScreen";
 import RegisterScreen from "../screens/RegisterScreen";
-import TabNavigator   from "./TabNavigator";
+import TabNavigator   from "../navigation/TabsNavigator";
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 

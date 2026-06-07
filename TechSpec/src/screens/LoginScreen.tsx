@@ -11,6 +11,8 @@ import { RootStackParamList } from "../navigation/types";
 import { useAuth } from "../context/AuthContext";
 import { useTheme } from "../context/ThemeContext";
 import CustomInput from "../components/CustomInput";
+import CustomButton from "../components/CustomButton";
+
 
 type Nav = NativeStackNavigationProp<RootStackParamList, "Login">;
 
