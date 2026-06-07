@@ -1,48 +1,142 @@
-import { ScrollView, Text, StyleSheet } from 'react-native';
-import { useTheme } from '../context/ThemeContext';
-import CategoryCard from '../components/CategoryCard';
-import { Category } from '../types/index';
-import { useComponents } from '../context/ComponentsContext';
+import React from "react";
+import {
+  View, Text, StyleSheet, ScrollView, Image,
+} from "react-native";
+import { useNavigation } from "@react-navigation/native";
+import { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { SafeAreaView } from "react-native-safe-area-context";
 
-const CATEGORIES: { name: Category; icon: string }[] = [
-  { name: 'Procesadores',     icon: 'hardware-chip' },
-  { name: 'Memoria RAM',      icon: 'server' },
-  { name: 'Almacenamiento',   icon: 'save' },
-  { name: 'Tarjetas Gráficas',icon: 'desktop' },
-  { name: 'Teclados',         icon: 'keypad' },
-  { name: 'Monitores',        icon: 'tv' },
-  { name: 'Otros',            icon: 'grid' },
-];
+import { HomeStackParamList } from "../navigation/types";
+import { CATEGORIES, COMPONENTS } from "../../assets/data";
+import { useAuth }          from "../context/AuthContext";
+import { useTheme }         from "../context/ThemeContext";
+import CategoryCard         from "../components/CategoryCard";
+import ComponentCard        from "../components/ComponentCard";
+import SectionTitle         from "../components/SectionTitle";
+
+type Nav = NativeStackNavigationProp<HomeStackParamList, "Home">;
 
 export default function HomeScreen() {
-  const { colors } = useTheme();
-  const { getByCategory } = useComponents();
+  const navigation = useNavigation<Nav>();
+  const { user }   = useAuth();
+  const { theme }  = useTheme();
 
   return (
-    <ScrollView
-      style={{ backgroundColor: colors.background }}
-      contentContainerStyle={styles.container}
-    >
-      <Text style={[styles.title, { color: colors.text }]}>Mis Componentes</Text>
-      <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
-        Selecciona una categoría para ver tus registros
-      </Text>
+    <SafeAreaView style={[styles.safe, { backgroundColor: theme.brandDark }]}>
+      {/* Header */}
+      <View style={styles.header}>
+        <View>
+          <Text style={styles.headerTitle}>TechSpec</Text>
+          <Text style={styles.headerSub}>Hola, {user?.name?.split(" ")[0]} 👋</Text>
+        </View>
+        <View style={[styles.avatar, { backgroundColor: theme.brand }]}>
+          <Text style={styles.initials}>{user?.initials ?? "?"}</Text>
+        </View>
+      </View>
 
-      {CATEGORIES.map(cat => (
-        <CategoryCard
-          key={cat.name}
-          category={cat.name}
-          icon={cat.icon}
-          count={getByCategory(cat.name).length}
-          onPress={() => {}}
-        />
-      ))}
-    </ScrollView>
+      <ScrollView
+        style={[styles.scroll, { backgroundColor: theme.background }]}
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Imagen local de banner */}
+        <View style={styles.bannerWrap}>
+          <Image
+            source={require("../../assets/icon.png")}
+            style={styles.bannerBg}
+            resizeMode="cover"
+          />
+          <View style={styles.bannerOverlay}>
+            <Text style={styles.bannerTitle}>Tu setup documentado</Text>
+            <Text style={styles.bannerSub}>
+              {COMPONENTS.length} componentes registrados
+            </Text>
+          </View>
+        </View>
+
+        {/* Categorías — grid de 2 columnas con flexbox */}
+        <SectionTitle title="Categorías" />
+        <View style={styles.grid}>
+          {CATEGORIES.map(cat => (
+            <View key={cat.id} style={styles.gridCell}>
+              <CategoryCard
+                category={cat}
+                onPress={() => navigation.navigate("CategoryList", { category: cat })}
+              />
+            </View>
+          ))}
+        </View>
+
+        {/* Recientes */}
+        <SectionTitle title="Recientes" />
+        {COMPONENTS.slice(0, 3).map(comp => (
+          <ComponentCard
+            key={comp.id}
+            component={comp}
+            onPress={() => navigation.navigate("ComponentDetail", { component: comp })}
+          />
+        ))}
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { padding: 24, paddingBottom: 40 },
-  title:    { fontSize: 26, fontWeight: '800', marginBottom: 4 },
-  subtitle: { fontSize: 14, marginBottom: 20 },
+  safe: { flex: 1 },
+
+  // Header
+  header: {
+    paddingHorizontal: 20,
+    paddingTop: 8,
+    paddingBottom: 16,
+    // Flexbox: fila con espacio entre título y avatar
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  headerTitle: { fontSize: 22, fontWeight: "600", color: "#fff" },
+  headerSub:   { fontSize: 13, color: "rgba(255,255,255,0.65)", marginTop: 2 },
+  avatar: {
+    width: 40, height: 40, borderRadius: 20,
+    alignItems: "center", justifyContent: "center",
+  },
+  initials: { fontSize: 14, fontWeight: "700", color: "#fff" },
+
+  scroll:  { flex: 1, borderTopLeftRadius: 0, borderTopRightRadius: 0 },
+  content: { padding: 16, paddingBottom: 32 },
+
+  // Banner con imagen local
+  bannerWrap: {
+    borderRadius: 14,
+    overflow: "hidden",
+    height: 110,
+    marginBottom: 20,
+    backgroundColor: "#085041",
+  },
+  bannerBg: {
+    position: "absolute",
+    width: "100%",
+    height: "100%",
+    opacity: 0.15,
+  },
+  bannerOverlay: {
+    flex: 1,
+    padding: 16,
+    justifyContent: "flex-end",
+  },
+  bannerTitle: { fontSize: 17, fontWeight: "600", color: "#fff" },
+  bannerSub:   { fontSize: 12, color: "rgba(255,255,255,0.7)", marginTop: 2 },
+
+  // Grid de 2 columnas — flexbox wrap
+  grid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    marginHorizontal: -5,
+    marginBottom: 16,
+  },
+  gridCell: {
+    width: "50%",
+    paddingHorizontal: 5,
+    paddingBottom: 10,
+  },
 });

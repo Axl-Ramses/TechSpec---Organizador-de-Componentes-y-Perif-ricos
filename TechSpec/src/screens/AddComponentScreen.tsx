@@ -1,116 +1,142 @@
-import { useState } from 'react';
-import { ScrollView, Text, TextInput, TouchableOpacity, StyleSheet, Alert } from 'react-native';
-import { useTheme } from '../context/ThemeContext';
-import { useComponents } from '../context/ComponentsContext';  // ← agrega este import
-import { Category, HardwareComponent } from '../types';
+import React, { useState } from "react";
+import {
+  View, Text, StyleSheet, ScrollView,
+  KeyboardAvoidingView, Platform, TouchableOpacity, Alert,
+} from "react-native";
+import { useNavigation, useRoute, RouteProp } from "@react-navigation/native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
+import { HomeStackParamList } from "../navigation/types";
+import { CATEGORIES } from "../../assets/data";
+import { useTheme }   from "../context/ThemeContext";
+import CustomInput    from "../components/CustomInput";
+import CustomButton   from "../components/CustomButton";
 
-
-const CATEGORIES: Category[] = [
-  'Procesadores', 'Memoria RAM', 'Almacenamiento',
-  'Tarjetas Gráficas', 'Teclados', 'Monitores', 'Otros',
-];
+type Route = RouteProp<HomeStackParamList, "AddComponent">;
 
 export default function AddComponentScreen() {
-  const { colors } = useTheme();
-  const { addComponent } = useComponents();
+  const navigation = useNavigation();
+  const route      = useRoute<Route>();
+  const { theme }  = useTheme();
 
-  const [name, setName]           = useState('');
-  const [model, setModel]         = useState('');
-  const [notes, setNotes]         = useState('');
-  const [category, setCategory]   = useState<Category>('Procesadores');
+  const [form, setForm] = useState({
+    categoryId: route.params?.categoryId ?? "",
+    name:  "",
+    model: "",
+    notes: "",
+    tags:  "",
+  });
+  const [errors, setErrors] = useState<{ categoryId?: string; name?: string }>({});
 
-  const handleSave = () => {
-    if (!name.trim() || !model.trim()) {
-      Alert.alert('Error', 'El nombre y modelo son obligatorios.');
-      return;
-    }
-
-    const newComponent: HardwareComponent = {
-      id: Date.now().toString(),
-      name: name.trim(),
-      model: model.trim(),
-      category,
-      notes: notes.trim(),
-    };
-
-    addComponent(newComponent);
-    Alert.alert('¡Guardado!', `${name} fue agregado a ${category}.`);
-    setName(''); setModel(''); setNotes('');
+  const set = (field: keyof typeof form) => (value: string) => {
+    setForm(p => ({ ...p, [field]: value }));
+    setErrors(p => ({ ...p, [field]: undefined }));
   };
 
-  const inputStyle = [styles.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }];
+  const validate = () => {
+    const e: typeof errors = {};
+    if (!form.categoryId) e.categoryId = "Selecciona una categoría";
+    if (!form.name.trim()) e.name       = "El nombre es obligatorio";
+    setErrors(e);
+    return Object.keys(e).length === 0;
+  };
+
+  const handleSave = () => {
+    if (!validate()) return;
+    Alert.alert("¡Guardado!", `${form.name} fue agregado.`, [
+      { text: "Aceptar", onPress: () => navigation.goBack() },
+    ]);
+  };
 
   return (
-    <ScrollView style={{ backgroundColor: colors.background }} contentContainerStyle={styles.container}>
-      <Text style={[styles.label, { color: colors.text }]}>Nombre del componente</Text>
-      <TextInput
-        style={inputStyle}
-        placeholder='Ej: Ryzen 7 5700G'
-        placeholderTextColor={colors.textSecondary}
-        value={name}
-        onChangeText={setName}
-      />
-
-      <Text style={[styles.label, { color: colors.text }]}>Modelo</Text>
-      <TextInput
-        style={inputStyle}
-        placeholder='Ej: AMD Ryzen 7 5700G OEM'
-        placeholderTextColor={colors.textSecondary}
-        value={model}
-        onChangeText={setModel}
-      />
-
-      <Text style={[styles.label, { color: colors.text }]}>Categoría</Text>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.categoryScroll}>
-        {CATEGORIES.map(cat => (
-          <TouchableOpacity
-            key={cat}
-            style={[
-              styles.categoryChip,
-              {
-                backgroundColor: category === cat ? colors.accent : colors.surface,
-                borderColor: category === cat ? colors.accent : colors.border,
-              }
-            ]}
-            onPress={() => setCategory(cat)}
-          >
-            <Text style={{ color: category === cat ? '#FFF' : colors.text, fontWeight: '600' }}>
-              {cat}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </ScrollView>
-
-      <Text style={[styles.label, { color: colors.text }]}>Notas técnicas</Text>
-      <TextInput
-        style={[inputStyle, styles.textArea]}
-        placeholder='Ej: XMP activado, CL17, voltaje 1.35V'
-        placeholderTextColor={colors.textSecondary}
-        value={notes}
-        onChangeText={setNotes}
-        multiline
-        numberOfLines={4}
-      />
-
-      <TouchableOpacity
-        style={[styles.saveButton, { backgroundColor: colors.accent }]}
-        onPress={handleSave}
-        activeOpacity={0.8}
+    <SafeAreaView style={[styles.safe, { backgroundColor: theme.background }]}>
+      <KeyboardAvoidingView
+        style={styles.flex}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
-        <Text style={styles.saveText}>Guardar Componente</Text>
-      </TouchableOpacity>
-    </ScrollView>
+        <ScrollView
+          contentContainerStyle={styles.scroll}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          {/* Selector de categoría con estilo condicional */}
+          <Text style={[styles.sectionLabel, { color: theme.textSub }]}>
+            CATEGORÍA *
+          </Text>
+          {errors.categoryId && (
+            <Text style={[styles.errText, { color: theme.danger }]}>
+              {errors.categoryId}
+            </Text>
+          )}
+          <View style={styles.chipGrid}>
+            {CATEGORIES.map(cat => {
+              const selected = form.categoryId === cat.id;
+              return (
+                <TouchableOpacity
+                  key={cat.id}
+                  style={[
+                    styles.chip,
+                    {
+                      backgroundColor: selected ? cat.bgColor : theme.card,
+                      borderColor:     selected ? cat.color   : theme.border,
+                      borderWidth:     selected ? 1.5 : 0.75,
+                    },
+                  ]}
+                  onPress={() => set("categoryId")(cat.id)}
+                  activeOpacity={0.75}
+                >
+                  <Text style={styles.chipEmoji}>{cat.emoji}</Text>
+                  <Text
+                    style={[
+                      styles.chipText,
+                      { color: selected ? cat.color : theme.textSub,
+                        fontWeight: selected ? "600" : "400" },
+                    ]}
+                    numberOfLines={1}
+                  >
+                    {cat.name}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+
+          <CustomInput label="Nombre del componente" value={form.name}  onChangeText={set("name")}  placeholder="Ej. Ryzen 7 5700G"          error={errors.name} required />
+          <CustomInput label="Modelo / SKU"          value={form.model} onChangeText={set("model")} placeholder="Ej. 100-100000263BOX" />
+          <CustomInput label="Notas técnicas"        value={form.notes} onChangeText={set("notes")} placeholder="Latencias, voltajes, configs..." multiline numberOfLines={4} />
+          <CustomInput label="Etiquetas (coma)"      value={form.tags}  onChangeText={set("tags")}  placeholder="APU, AM4, OC" />
+
+          <CustomButton label="💾  Guardar ficha" onPress={handleSave} />
+          <CustomButton label="Cancelar" onPress={() => navigation.goBack()} variant="secondary" />
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container:      { padding: 24, paddingBottom: 40 },
-  label:          { fontSize: 15, fontWeight: '600', marginTop: 16, marginBottom: 6 },
-  input:          { borderWidth: 1, borderRadius: 10, padding: 12, fontSize: 15 },
-  textArea:       { height: 100, textAlignVertical: 'top' },
-  categoryScroll: { marginBottom: 8 },
-  categoryChip:   { borderWidth: 1, borderRadius: 20, paddingHorizontal: 16, paddingVertical: 8, marginRight: 8 },
-  saveButton:     { borderRadius: 12, padding: 16, alignItems: 'center', marginTop: 24 },
-  saveText:       { color: '#FFF', fontSize: 16, fontWeight: '700' },
+  safe:  { flex: 1 },
+  flex:  { flex: 1 },
+  scroll: { padding: 16, paddingBottom: 60 },
+
+  sectionLabel: { fontSize: 11, fontWeight: "600", letterSpacing: 0.6, marginBottom: 8 },
+  errText:      { fontSize: 11, marginBottom: 6 },
+
+  // Chips de categoría — flexbox wrap
+  chipGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    marginBottom: 20,
+  },
+  chip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    paddingVertical: 7,
+    paddingHorizontal: 12,
+    borderRadius: 999,
+  },
+  chipEmoji: { fontSize: 14 },
+  chipText:  { fontSize: 12 },
 });

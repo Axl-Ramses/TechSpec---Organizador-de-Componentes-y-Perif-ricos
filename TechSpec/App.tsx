@@ -1,16 +1,17 @@
-import { NavigationContainer } from '@react-navigation/native';
-import { ThemeProvider } from './src/context/ThemeContext';
-import { ComponentsProvider } from './src/context/ComponentsContext';
-import TabsNavigator from './src/navigation/TabsNavigator';
+import { NavigationContainer } from "@react-navigation/native";
+import StackNavigator from "./src/navigation/StackNavigator";
+import { navigationRef } from "./src/navigation/NavigationService";
+import { AuthProvider } from "./src/context/AuthContext";
+import { ThemeProvider } from "./src/context/ThemeContext";
 
 export default function App() {
   return (
     <ThemeProvider>
-      <ComponentsProvider>
-        <NavigationContainer>
-          <TabsNavigator />
+      <AuthProvider>
+        <NavigationContainer ref={navigationRef}>
+          <StackNavigator />
         </NavigationContainer>
-      </ComponentsProvider>
+      </AuthProvider>
     </ThemeProvider>
   );
-}''
+}
