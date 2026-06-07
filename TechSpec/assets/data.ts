@@ -54,7 +54,7 @@ export const COMPONENTS: HardwareComponent[] = [
       { key: "GPU integrada",    value: "Radeon RX Vega 8" },
       { key: "Caché L3",         value: "16 MB" },
     ],
-    hasImage: true, createdAt: "2024-01-10", updatedAt: "2024-06-03",
+    hasImage: true, createdAt: "07-06-2026", updatedAt: "07-06-2026",
   },
   {
     id: "c2", categoryId: "cpu",
@@ -69,7 +69,7 @@ export const COMPONENTS: HardwareComponent[] = [
       { key: "Socket",           value: "AM4" },
       { key: "Caché L3",         value: "32 MB" },
     ],
-    hasImage: false, createdAt: "2024-02-15", updatedAt: "2024-05-20",
+    hasImage: false, createdAt: "07-06-2026", updatedAt: "07-06-2026",
   },
   {
     id: "c3", categoryId: "kb",
@@ -83,6 +83,6 @@ export const COMPONENTS: HardwareComponent[] = [
       { key: "Batería",        value: "4000 mAh" },
       { key: "Retroiluminación", value: "RGB per-key" },
     ],
-    hasImage: false, createdAt: "2024-03-01", updatedAt: "2024-06-01",
+    hasImage: false, createdAt: "07-06-2026", updatedAt: "07-06-2026",
   },
 ];

@@ -74,8 +74,8 @@ export default function RegisterScreen() {
             Registra tus datos para comenzar
           </Text>
 
-          <CustomInput label="Nombre completo"      value={form.name}     onChangeText={set("name")}     placeholder="Ej. Carlos Mendoza"    autoCapitalize="words"  error={errors.name}     required />
-          <CustomInput label="Correo electrónico"   value={form.email}    onChangeText={set("email")}    placeholder="carlos@ejemplo.com"    keyboardType="email-address" autoCapitalize="none" error={errors.email}    required />
+          <CustomInput label="Nombre completo"      value={form.name}     onChangeText={set("name")}     placeholder="Ej. Axel Aguilar"    autoCapitalize="words"  error={errors.name}     required />
+          <CustomInput label="Correo electrónico"   value={form.email}    onChangeText={set("email")}    placeholder="Axl@ejemplo.com"    keyboardType="email-address" autoCapitalize="none" error={errors.email}    required />
           <CustomInput label="Teléfono"             value={form.phone}    onChangeText={set("phone")}    placeholder="+504 9999-9999"         keyboardType="phone-pad"     error={errors.phone} />
           <CustomInput label="Contraseña"           value={form.password} onChangeText={set("password")} placeholder="Mínimo 8 caracteres"    secureTextEntry error={errors.password}  required />
           <CustomInput label="Confirmar contraseña" value={form.confirm}  onChangeText={set("confirm")}  placeholder="Repite tu contraseña"   secureTextEntry error={errors.confirm}   required />

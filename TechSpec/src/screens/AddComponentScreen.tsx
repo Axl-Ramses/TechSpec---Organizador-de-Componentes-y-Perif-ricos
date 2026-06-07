@@ -11,6 +11,7 @@ import { CATEGORIES } from "../../assets/data";
 import { useTheme }   from "../context/ThemeContext";
 import CustomInput    from "../components/CustomInput";
 import CustomButton   from "../components/CustomButton";
+import { useComponents } from "../context/ComponentsContext";
 
 type Route = RouteProp<HomeStackParamList, "AddComponent">;
 
@@ -41,12 +42,26 @@ export default function AddComponentScreen() {
     return Object.keys(e).length === 0;
   };
 
-  const handleSave = () => {
-    if (!validate()) return;
-    Alert.alert("¡Guardado!", `${form.name} fue agregado.`, [
-      { text: "Aceptar", onPress: () => navigation.goBack() },
-    ]);
-  };
+ 
+
+// dentro del componente:
+const { addComponent } = useComponents();
+
+const handleSave = () => {
+  if (!validate()) return;
+  addComponent({
+    categoryId: form.categoryId,
+    name:       form.name,
+    model:      form.model,
+    notes:      form.notes,
+    tags:       form.tags.split(",").map(t => t.trim()).filter(Boolean),
+    specs:      [],
+    hasImage:   false,
+  });
+  Alert.alert("¡Guardado!", `${form.name} fue agregado.`, [
+    { text: "Aceptar", onPress: () => navigation.goBack() },
+  ]);
+};
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: theme.background }]}>

@@ -43,7 +43,7 @@ export default function LoginScreen() {
     setTimeout(() => {
       setLoading(false);
       if (email === "demo@techspec.app" && password === "demo1234") {
-        login(email, "Carlos Mendoza");
+        login(email, "demo@techspec.app");
       } else {
         Alert.alert("Error", "Usa demo@techspec.app / demo1234");
       }

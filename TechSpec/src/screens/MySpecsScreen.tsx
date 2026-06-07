@@ -1,37 +1,33 @@
 import React, { useState } from "react";
-import {
-  View, Text, TextInput, StyleSheet,
-  FlatList, Alert,
-} from "react-native";
+import { View, Text, TextInput, StyleSheet, FlatList, Alert } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import { COMPONENTS, HardwareComponent } from "../../assets/data";
-import { useTheme }    from "../context/ThemeContext";
-import ComponentCard   from "../components/ComponentCard";
-import EmptyState      from "../components/EmptyState";
-import SectionTitle    from "../components/SectionTitle";
+import { HardwareComponent } from "../../assets/data";
+import { useComponents } from "../context/ComponentsContext";
+import { useTheme }      from "../context/ThemeContext";
+import ComponentCard     from "../components/ComponentCard";
+import EmptyState        from "../components/EmptyState";
+import SectionTitle      from "../components/SectionTitle";
 
 export default function MySpecsScreen() {
-  const { theme }  = useTheme();
+  const { theme }      = useTheme();
+  const { components } = useComponents();
   const [search, setSearch] = useState("");
 
-  const filtered = COMPONENTS.filter(c =>
+  const filtered = components.filter(c =>
     c.name.toLowerCase().includes(search.toLowerCase()) ||
     c.model.toLowerCase().includes(search.toLowerCase())
   );
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: theme.brandDark }]}>
-      {/* Header */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Mis specs</Text>
-        <Text style={styles.headerSub}>{COMPONENTS.length} componentes</Text>
+        <Text style={styles.headerSub}>{components.length} componentes</Text>
       </View>
 
-      {/* Contenido con borde redondeado */}
       <View style={[styles.body, { backgroundColor: theme.background }]}>
-        {/* Buscador */}
         <View style={[styles.searchBar, { backgroundColor: theme.card, borderColor: theme.border }]}>
           <Ionicons name="search-outline" size={18} color={theme.textMuted} />
           <TextInput
@@ -77,15 +73,12 @@ const styles = StyleSheet.create({
   header: { paddingHorizontal: 20, paddingTop: 8, paddingBottom: 16 },
   headerTitle: { fontSize: 22, fontWeight: "600", color: "#fff" },
   headerSub:   { fontSize: 13, color: "rgba(255,255,255,0.65)", marginTop: 2 },
-
   body: {
     flex: 1,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     padding: 16,
   },
-
-  // Barra de búsqueda — flexbox fila
   searchBar: {
     flexDirection: "row",
     alignItems: "center",

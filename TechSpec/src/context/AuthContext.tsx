@@ -24,7 +24,7 @@ const AuthContext = createContext<AuthContextType>({
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
 
-  const login = (email: string, name: string = "Axel Aguilar") => {
+  const login = (email: string, name: string = "techspec") => {
     const initials = name
       .split(" ")
       .map(n => n[0])

@@ -1,29 +1,28 @@
 import React from "react";
-import {
-  View, Text, StyleSheet, ScrollView, Image,
-} from "react-native";
+import { View, Text, StyleSheet, ScrollView, Image } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { HomeStackParamList } from "../navigation/types";
-import { CATEGORIES, COMPONENTS } from "../../assets/data";
-import { useAuth }          from "../context/AuthContext";
-import { useTheme }         from "../context/ThemeContext";
-import CategoryCard         from "../components/CategoryCard";
-import ComponentCard        from "../components/ComponentCard";
-import SectionTitle         from "../components/SectionTitle";
+import { CATEGORIES } from "../../assets/data";
+import { useComponents } from "../context/ComponentsContext";
+import { useAuth }       from "../context/AuthContext";
+import { useTheme }      from "../context/ThemeContext";
+import CategoryCard      from "../components/CategoryCard";
+import ComponentCard     from "../components/ComponentCard";
+import SectionTitle      from "../components/SectionTitle";
 
 type Nav = NativeStackNavigationProp<HomeStackParamList, "Home">;
 
 export default function HomeScreen() {
-  const navigation = useNavigation<Nav>();
-  const { user }   = useAuth();
-  const { theme }  = useTheme();
+  const navigation         = useNavigation<Nav>();
+  const { user }           = useAuth();
+  const { theme }          = useTheme();
+  const { components }     = useComponents();
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: theme.brandDark }]}>
-      {/* Header */}
       <View style={styles.header}>
         <View>
           <Text style={styles.headerTitle}>TechSpec</Text>
@@ -39,7 +38,7 @@ export default function HomeScreen() {
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
-        {/* Imagen local de banner */}
+        {/* Banner con imagen local */}
         <View style={styles.bannerWrap}>
           <Image
             source={require("../../assets/icon.png")}
@@ -49,12 +48,12 @@ export default function HomeScreen() {
           <View style={styles.bannerOverlay}>
             <Text style={styles.bannerTitle}>Tu setup documentado</Text>
             <Text style={styles.bannerSub}>
-              {COMPONENTS.length} componentes registrados
+              {components.length} componentes registrados
             </Text>
           </View>
         </View>
 
-        {/* Categorías — grid de 2 columnas con flexbox */}
+        {/* Categorías — grid 2 columnas */}
         <SectionTitle title="Categorías" />
         <View style={styles.grid}>
           {CATEGORIES.map(cat => (
@@ -69,7 +68,7 @@ export default function HomeScreen() {
 
         {/* Recientes */}
         <SectionTitle title="Recientes" />
-        {COMPONENTS.slice(0, 3).map(comp => (
+        {components.slice(0, 3).map(comp => (
           <ComponentCard
             key={comp.id}
             component={comp}
@@ -83,13 +82,10 @@ export default function HomeScreen() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1 },
-
-  // Header
   header: {
     paddingHorizontal: 20,
     paddingTop: 8,
     paddingBottom: 16,
-    // Flexbox: fila con espacio entre título y avatar
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
@@ -101,11 +97,8 @@ const styles = StyleSheet.create({
     alignItems: "center", justifyContent: "center",
   },
   initials: { fontSize: 14, fontWeight: "700", color: "#fff" },
-
-  scroll:  { flex: 1, borderTopLeftRadius: 0, borderTopRightRadius: 0 },
+  scroll:  { flex: 1 },
   content: { padding: 16, paddingBottom: 32 },
-
-  // Banner con imagen local
   bannerWrap: {
     borderRadius: 14,
     overflow: "hidden",
@@ -126,8 +119,6 @@ const styles = StyleSheet.create({
   },
   bannerTitle: { fontSize: 17, fontWeight: "600", color: "#fff" },
   bannerSub:   { fontSize: 12, color: "rgba(255,255,255,0.7)", marginTop: 2 },
-
-  // Grid de 2 columnas — flexbox wrap
   grid: {
     flexDirection: "row",
     flexWrap: "wrap",
