@@ -20,7 +20,7 @@ const isPhone = (v: string) => v === "" || /^[\d+\-\s()]{7,15}$/.test(v);
 
 export default function RegisterScreen() {
   const navigation = useNavigation<Nav>();
-  const { login }  = useAuth();
+  const { register }  = useAuth();
   const { theme }  = useTheme();
 
   const [form, setForm] = useState({
@@ -47,16 +47,18 @@ export default function RegisterScreen() {
     return Object.keys(e).length === 0;
   };
 
-  const handleRegister = () => {
-    if (!validate()) return;
-    setLoading(true);
-    setTimeout(() => {
-      setLoading(false);
-      Alert.alert("¡Bienvenido!", `Cuenta creada para ${form.name}.`, [
-        { text: "Continuar", onPress: () => login(form.email, form.name) },
-      ]);
-    }, 900);
-  };
+ const handleRegister = async () => {
+  if (!validate()) return;
+  setLoading(true);
+  try {
+    await register(form.name, form.email, form.phone, form.password);
+    Alert.alert("¡Bienvenido!", `Cuenta creada para ${form.name}. Revisa tu correo si se pide confirmación.`);
+  } catch (err: any) {
+    Alert.alert("Error", err.message ?? "No se pudo crear la cuenta");
+  } finally {
+    setLoading(false);
+  }
+};
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: theme.background }]}>

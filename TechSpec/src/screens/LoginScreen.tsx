@@ -36,19 +36,18 @@ export default function LoginScreen() {
     setErrors(e);
     return Object.keys(e).length === 0;
   };
-
-  const handleLogin = () => {
-    if (!validate()) return;
-    setLoading(true);
-    setTimeout(() => {
-      setLoading(false);
-      if (email === "demo@techspec.app" && password === "demo1234") {
-        login(email, "demo@techspec.app");
-      } else {
-        Alert.alert("Error", "Usa demo@techspec.app / demo1234");
-      }
-    }, 800);
-  };
+  
+const handleLogin = async () => {
+  if (!validate()) return;
+  setLoading(true);
+  try {
+    await login(email, password);
+  } catch (err: any) {
+    Alert.alert("Error", err.message ?? "No se pudo iniciar sesión");
+  } finally {
+    setLoading(false);
+  }
+};
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: theme.background }]}>

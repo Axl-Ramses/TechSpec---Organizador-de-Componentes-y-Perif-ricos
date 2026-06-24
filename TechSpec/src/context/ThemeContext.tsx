@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState } from "react";
 
+
 // ── Paleta de colores ──────────────────────────────────────────────────────
 const lightTheme = {
   brand:       "#1D9E75",
