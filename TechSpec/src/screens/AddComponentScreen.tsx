@@ -11,10 +11,8 @@ import { CATEGORIES } from "../../assets/data";
 import { useTheme }   from "../context/ThemeContext";
 import CustomInput    from "../components/CustomInput";
 import CustomButton   from "../components/CustomButton";
-import { useComponents } from "../context/ComponentsContext";
-import { useAppSelector , useAppDispatch  } from "../store/hooks";
+import { useAppDispatch } from "../store/hooks";
 import { addComponent } from "../store/componentsSlice";
-
 type Route = RouteProp<HomeStackParamList, "AddComponent">;
 
 export default function AddComponentScreen() {
@@ -44,29 +42,29 @@ export default function AddComponentScreen() {
     return Object.keys(e).length === 0;
   };
 
- 
-
-
-const { addComponent } = useComponents();
 
 const dispatch = useAppDispatch();
 
-const handleSave = () => {
+const handleSave = async () => {
   if (!validate()) return;
-  dispatch(addComponent({
-    categoryId: form.categoryId,
-    name:       form.name,
-    model:      form.model,
-    notes:      form.notes,
-    tags:       form.tags.split(",").map(t => t.trim()).filter(Boolean),
-    specs:      [],
-    hasImage:   false,
-  }));
-  Alert.alert("¡Guardado!", `${form.name} fue agregado.`, [
-    { text: "Aceptar", onPress: () => navigation.goBack() },
-  ]);
+  try {
+    await dispatch(addComponent({
+      
+      categoryId: form.categoryId,
+      name:       form.name,
+      model:      form.model,
+      notes:      form.notes,
+      tags:       form.tags.split(",").map(t => t.trim()).filter(Boolean),
+      specs:      [],
+      hasImage:   false,
+    })).unwrap();
+    Alert.alert("¡Guardado!", `${form.name} fue agregado.`, [
+      { text: "Aceptar", onPress: () => navigation.goBack() },
+    ]);
+  } catch (err: any) {
+    Alert.alert("Error", err.message ?? "No se pudo guardar el componente");
+  }
 };
-
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: theme.background }]}>
       <KeyboardAvoidingView
@@ -159,7 +157,4 @@ const styles = StyleSheet.create({
   chipEmoji: { fontSize: 14 },
   chipText:  { fontSize: 12 },
 });
-function useAppDispatch() {
-  throw new Error("Function not implemented.");
-}
 

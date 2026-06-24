@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect} from "react";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { Ionicons } from "@expo/vector-icons";
 import { MainTabParamList } from "./types";
@@ -8,6 +8,8 @@ import HomeStackNavigator from "./HomeStackNavigator";
 import MySpecsScreen      from "../screens/MySpecsScreen";
 import AddComponentScreen from "../screens/AddComponentScreen";
 import ProfileScreen      from "../screens/ProfileScreen";
+import { useAppDispatch } from "../store/hooks";
+import { fetchComponents } from "../store/componentsSlice";
 
 const Tab = createBottomTabNavigator<MainTabParamList>();
 
@@ -15,6 +17,11 @@ type IoniconsName = React.ComponentProps<typeof Ionicons>["name"];
 
 export default function TabNavigator() {
   const { theme } = useTheme();
+  const dispatch = useAppDispatch();
+
+  useEffect(() => {
+    dispatch(fetchComponents());
+  }, [dispatch]);
 
   return (
     <Tab.Navigator
