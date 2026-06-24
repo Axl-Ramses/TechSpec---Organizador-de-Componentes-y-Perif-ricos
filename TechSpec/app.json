@@ -10,6 +10,7 @@
       "supportsTablet": true
     },
     "android": {
+       "package": "com.axlramses.techspec",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/android-icon-foreground.png",
@@ -20,6 +21,12 @@
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    }
+    },
+    "extra": {
+      "eas": {
+        "projectId": "24b9204a-5864-45cc-9989-3d267606f931"
+      }
+    },
+    "owner": "axl-ramses"
   }
 }
