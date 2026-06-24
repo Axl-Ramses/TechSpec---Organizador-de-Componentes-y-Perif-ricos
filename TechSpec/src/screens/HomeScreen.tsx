@@ -6,12 +6,12 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import { HomeStackParamList } from "../navigation/types";
 import { CATEGORIES } from "../../assets/data";
-import { useComponents } from "../context/ComponentsContext";
 import { useAuth }       from "../context/AuthContext";
 import { useTheme }      from "../context/ThemeContext";
 import CategoryCard      from "../components/CategoryCard";
 import ComponentCard     from "../components/ComponentCard";
 import SectionTitle      from "../components/SectionTitle";
+import {useAppSelector} from "../store/hooks";
 
 type Nav = NativeStackNavigationProp<HomeStackParamList, "Home">;
 
@@ -19,7 +19,7 @@ export default function HomeScreen() {
   const navigation         = useNavigation<Nav>();
   const { user }           = useAuth();
   const { theme }          = useTheme();
-  const { components }     = useComponents();
+  const components     = useAppSelector((state) => state.components.items);
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: theme.brandDark }]}>

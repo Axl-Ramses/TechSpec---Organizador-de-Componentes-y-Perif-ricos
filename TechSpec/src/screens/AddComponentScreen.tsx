@@ -12,6 +12,8 @@ import { useTheme }   from "../context/ThemeContext";
 import CustomInput    from "../components/CustomInput";
 import CustomButton   from "../components/CustomButton";
 import { useComponents } from "../context/ComponentsContext";
+import { useAppSelector , useAppDispatch  } from "../store/hooks";
+import { addComponent } from "../store/componentsSlice";
 
 type Route = RouteProp<HomeStackParamList, "AddComponent">;
 
@@ -44,12 +46,14 @@ export default function AddComponentScreen() {
 
  
 
-// dentro del componente:
+
 const { addComponent } = useComponents();
+
+const dispatch = useAppDispatch();
 
 const handleSave = () => {
   if (!validate()) return;
-  addComponent({
+  dispatch(addComponent({
     categoryId: form.categoryId,
     name:       form.name,
     model:      form.model,
@@ -57,7 +61,7 @@ const handleSave = () => {
     tags:       form.tags.split(",").map(t => t.trim()).filter(Boolean),
     specs:      [],
     hasImage:   false,
-  });
+  }));
   Alert.alert("¡Guardado!", `${form.name} fue agregado.`, [
     { text: "Aceptar", onPress: () => navigation.goBack() },
   ]);
@@ -155,3 +159,7 @@ const styles = StyleSheet.create({
   chipEmoji: { fontSize: 14 },
   chipText:  { fontSize: 12 },
 });
+function useAppDispatch() {
+  throw new Error("Function not implemented.");
+}
+

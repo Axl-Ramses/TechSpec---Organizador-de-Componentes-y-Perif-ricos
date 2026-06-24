@@ -4,15 +4,15 @@ import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { HardwareComponent } from "../../assets/data";
-import { useComponents } from "../context/ComponentsContext";
 import { useTheme }      from "../context/ThemeContext";
 import ComponentCard     from "../components/ComponentCard";
 import EmptyState        from "../components/EmptyState";
 import SectionTitle      from "../components/SectionTitle";
+import { useAppSelector } from "../store/hooks";
 
 export default function MySpecsScreen() {
   const { theme }      = useTheme();
-  const { components } = useComponents();
+  const  components  = useAppSelector((state) => state.components.items);
   const [search, setSearch] = useState("");
 
   const filtered = components.filter(c =>
