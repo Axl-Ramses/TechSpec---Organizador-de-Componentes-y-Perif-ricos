@@ -7,7 +7,6 @@ export interface Category {
   emoji:   string;
   color:   string;
   bgColor: string;
-  count:   number;
 }
 
 export interface Spec {
@@ -30,12 +29,12 @@ export interface HardwareComponent {
 
 // ── Categorías ────────────────────────────────────────────────────────────────
 export const CATEGORIES: Category[] = [
-  { id: "cpu",     name: "Procesadores",  icon: "hardware-chip",  emoji: "🔲", color: "#085041", bgColor: "#E1F5EE", count: 2 },
-  { id: "kb",      name: "Teclados",      icon: "keypad",         emoji: "⌨️", color: "#185FA5", bgColor: "#E6F1FB", count: 1 },
-  { id: "storage", name: "Almacenamiento",icon: "save",           emoji: "💾", color: "#633806", bgColor: "#FAEEDA", count: 3 },
-  { id: "monitor", name: "Monitores",     icon: "desktop",        emoji: "🖥️", color: "#72243E", bgColor: "#FBEAF0", count: 1 },
-  { id: "gpu",     name: "GPUs",          icon: "flash",          emoji: "⚡", color: "#791F1F", bgColor: "#FCEBEB", count: 1 },
-  { id: "ram",     name: "RAM",           icon: "albums",         emoji: "🧩", color: "#27500A", bgColor: "#EAF3DE", count: 2 },
+  { id: "cpu",     name: "Procesadores",  icon: "hardware-chip",  emoji: "🔲", color: "#085041", bgColor: "#E1F5EE" },
+  { id: "kb",      name: "Teclados",      icon: "keypad",         emoji: "⌨️", color: "#185FA5", bgColor: "#E6F1FB" },
+  { id: "storage", name: "Almacenamiento",icon: "save",           emoji: "💾", color: "#633806", bgColor: "#FAEEDA" },
+  { id: "monitor", name: "Monitores",     icon: "desktop",        emoji: "🖥️", color: "#72243E", bgColor: "#FBEAF0" },
+  { id: "gpu",     name: "GPUs",          icon: "flash",          emoji: "⚡", color: "#791F1F", bgColor: "#FCEBEB" },
+  { id: "ram",     name: "RAM",           icon: "albums",         emoji: "🧩", color: "#27500A", bgColor: "#EAF3DE" },
 ];
 
 // ── Componentes de ejemplo ────────────────────────────────────────────────────

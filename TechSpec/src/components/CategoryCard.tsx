@@ -5,10 +5,12 @@ import { useTheme } from "../context/ThemeContext";
 
 interface Props {
   category: Category;
+  /** Cantidad real de componentes registrados en esta categoría */
+  count:    number;
   onPress:  () => void;
 }
 
-export default function CategoryCard({ category, onPress }: Props) {
+export default function CategoryCard({ category, count, onPress }: Props) {
   const { theme } = useTheme();
 
   return (
@@ -25,7 +27,7 @@ export default function CategoryCard({ category, onPress }: Props) {
       {/* Nombre y contador */}
       <Text style={[styles.name, { color: theme.text }]}>{category.name}</Text>
       <Text style={[styles.count, { color: theme.textMuted }]}>
-        {category.count} {category.count === 1 ? "registro" : "registros"}
+        {count} {count === 1 ? "registro" : "registros"}
       </Text>
     </TouchableOpacity>
   );

@@ -4,6 +4,7 @@ import StackNavigator from "./src/navigation/StackNavigator";
 import { navigationRef } from "./src/navigation/NavigationService";
 import { AuthProvider } from "./src/context/AuthContext";
 import { ThemeProvider } from "./src/context/ThemeContext";
+import { StructuresProvider } from "./src/context/StructuresContext";
 import { store } from "./src/store";
 
 export default function App() {
@@ -11,9 +12,11 @@ export default function App() {
     <Provider store={store}>
       <ThemeProvider>
         <AuthProvider>
-          <NavigationContainer ref={navigationRef}>
-            <StackNavigator />
-          </NavigationContainer>
+          <StructuresProvider>
+            <NavigationContainer ref={navigationRef}>
+              <StackNavigator />
+            </NavigationContainer>
+          </StructuresProvider>
         </AuthProvider>
       </ThemeProvider>
     </Provider>

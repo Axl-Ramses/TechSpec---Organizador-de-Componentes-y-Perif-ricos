@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useMemo } from "react";
 import {
   View, Text, StyleSheet, ScrollView,
   Image, Alert,
@@ -8,11 +8,14 @@ import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { HomeStackParamList } from "../navigation/types";
-import { CATEGORIES }  from "../../assets/data";
+import { CATEGORIES, Spec }   from "../../assets/data";
 import { useTheme }    from "../context/ThemeContext";
 import SpecRow         from "../components/SpecRow";
 import Badge           from "../components/Badge";
 import CustomButton    from "../components/CustomButton";
+import { useAppDispatch } from "../store/hooks";
+import { deleteComponent } from "../store/componentsSlice";
+import { useStructures } from "../context/StructuresContext";
 
 type Nav   = NativeStackNavigationProp<HomeStackParamList, "ComponentDetail">;
 type Route = RouteProp<HomeStackParamList, "ComponentDetail">;
@@ -21,16 +24,60 @@ const BADGE_COLORS = ["teal", "blue", "amber"] as const;
 
 export default function ComponentDetailScreen() {
   const navigation = useNavigation<Nav>();
+  const dispatch   = useAppDispatch();
   const { params } = useRoute<Route>();
   const { theme }  = useTheme();
   const { component } = params;
 
+  // ── Integración de Estructuras de Datos ──
+  const {
+    pushRecentlyViewed,
+    pushUndo,
+    createSpecsLinkedList,
+  } = useStructures();
+
+  // 1. Pila (Stack - LIFO): Apila este componente en el historial de vistos recientemente
+  useEffect(() => {
+    pushRecentlyViewed(component);
+  }, [component.id]);
+
+  // 2. Lista Enlazada (LinkedList): Gestiona la colección de especificaciones técnicas
+  const specsLinkedList = useMemo(() => {
+    return createSpecsLinkedList(component.specs ?? []);
+  }, [component.specs]);
+
   const cat = CATEGORIES.find(c => c.id === component.categoryId);
 
   const shareSpecs = () => {
-    const text = component.specs.map(s => `${s.key}: ${s.value}`).join("\n");
+    const text = specsLinkedList.toArray().map(s => `${s.key}: ${s.value}`).join("\n");
     Alert.alert("Compartir", `${component.name}\n\n${text}`);
   };
+
+  const handleDelete = () => {
+    Alert.alert(
+      "Eliminar componente",
+      `¿Deseas eliminar "${component.name}"? Podrás recuperarlo desde la Pila de Deshacer (Undo Stack).`,
+      [
+        { text: "Cancelar", style: "cancel" },
+        {
+          text: "Eliminar",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              // Apilamos en la Pila de Deshacer antes de eliminar
+              pushUndo(component);
+              await dispatch(deleteComponent(component.id)).unwrap();
+              navigation.goBack();
+            } catch (err: any) {
+              Alert.alert("Error", err.message ?? "No se pudo eliminar el componente.");
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const specsArray = specsLinkedList.toArray();
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: theme.background }]}>
@@ -65,12 +112,24 @@ export default function ComponentDetailScreen() {
         </View>
 
         <View style={styles.content}>
-          {/* Especificaciones */}
+          {/* Especificaciones — Gestionadas y Recorridas con Lista Enlazada */}
           <View style={[styles.card, { backgroundColor: theme.card, borderColor: theme.border }]}>
-            <Text style={[styles.cardTitle, { color: theme.textMuted }]}>ESPECIFICACIONES</Text>
-            {component.specs.map((s, i) => (
-              <SpecRow key={i} label={s.key} value={s.value} />
-            ))}
+            <View style={styles.cardHeaderWithBadge}>
+              <Text style={[styles.cardTitle, { color: theme.textMuted }]}>ESPECIFICACIONES</Text>
+              <Text style={[styles.structureBadge, { color: theme.brand }]}>
+                Lista Enlazada: {specsLinkedList.size()} nodos
+              </Text>
+            </View>
+
+            {specsArray.length > 0 ? (
+              specsArray.map((s, i) => (
+                <SpecRow key={`${s.key}-${i}`} label={s.key} value={s.value} />
+              ))
+            ) : (
+              <Text style={[styles.emptySpecsText, { color: theme.textMuted }]}>
+                Sin especificaciones técnicas registradas.
+              </Text>
+            )}
           </View>
 
           {/* Notas técnicas */}
@@ -99,11 +158,21 @@ export default function ComponentDetailScreen() {
               <CustomButton label="📤  Compartir" onPress={shareSpecs} variant="secondary" />
             </View>
           </View>
+
+          {/* Botón Eliminar con soporte para Pila de Deshacer */}
+          <View style={styles.deleteWrap}>
+            <CustomButton
+              label="🗑️  Eliminar componente"
+              onPress={handleDelete}
+              variant="danger"
+            />
+          </View>
         </View>
       </ScrollView>
     </SafeAreaView>
   );
 }
+
 
 const styles = StyleSheet.create({
   safe: { flex: 1 },
@@ -164,4 +233,24 @@ const styles = StyleSheet.create({
   // Acciones — 2 botones en fila
   actionsRow: { flexDirection: "row", gap: 8 },
   actionBtn:  { flex: 1 },
+  deleteWrap: {
+    marginTop: 10,
+  },
+  cardHeaderWithBadge: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 8,
+  },
+  structureBadge: {
+    fontSize: 10,
+    fontWeight: "600",
+    letterSpacing: 0.3,
+  },
+  emptySpecsText: {
+    fontSize: 12,
+    fontStyle: "italic",
+    marginVertical: 4,
+  },
 });
+

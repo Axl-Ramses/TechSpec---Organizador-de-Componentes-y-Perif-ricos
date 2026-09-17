@@ -10,7 +10,7 @@
       "supportsTablet": true
     },
     "android": {
-       "package": "com.axlramses.techspec",
+      "package": "com.axlramses.techspec",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/android-icon-foreground.png",
@@ -27,6 +27,10 @@
         "projectId": "24b9204a-5864-45cc-9989-3d267606f931"
       }
     },
-    "owner": "axl-ramses"
+    "owner": "axl-ramses",
+    "plugins": [
+      "expo-font",
+      "expo-status-bar"
+    ]
   }
 }
