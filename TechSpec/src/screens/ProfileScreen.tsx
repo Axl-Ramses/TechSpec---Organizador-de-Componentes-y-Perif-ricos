@@ -11,7 +11,7 @@ import CustomButton  from "../components/CustomButton";
 
 export default function ProfileScreen() {
   const { user, logout }          = useAuth();
-  const { theme, toggleTheme }    = useTheme();
+  const { theme, toggleTheme, followsSystem, useSystemTheme } = useTheme();
 
   const handleLogout = () => {
     Alert.alert("Cerrar sesión", "¿Seguro que deseas salir?", [
@@ -47,9 +47,16 @@ export default function ProfileScreen() {
         <View style={[styles.card, { backgroundColor: theme.card, borderColor: theme.border }]}>
           <Text style={[styles.cardTitle, { color: theme.textMuted }]}>PREFERENCIAS</Text>
 
-          {/* Toggle modo oscuro — estilo condicional según tema */}
+          {/* Toggle modo oscuro — la preferencia se guarda en el dispositivo */}
           <View style={styles.prefRow}>
-            <Text style={[styles.prefLabel, { color: theme.text }]}>🌙 Modo oscuro</Text>
+            <View style={styles.prefTexts}>
+              <Text style={[styles.prefLabel, { color: theme.text }]}>🌙 Modo oscuro</Text>
+              <Text style={[styles.prefHint, { color: theme.textMuted }]}>
+                {followsSystem
+                  ? "Siguiendo el tema del sistema"
+                  : "Preferencia guardada en este dispositivo"}
+              </Text>
+            </View>
             <Switch
               value={theme.isDark}
               onValueChange={toggleTheme}
@@ -57,6 +64,15 @@ export default function ProfileScreen() {
               thumbColor={theme.white}
             />
           </View>
+
+          {/* Permite volver a delegar el tema al sistema operativo */}
+          {!followsSystem && (
+            <TouchableOpacity onPress={useSystemTheme} activeOpacity={0.7}>
+              <Text style={[styles.prefAction, { color: theme.brand }]}>
+                Usar el tema del sistema
+              </Text>
+            </TouchableOpacity>
+          )}
         </View>
 
         {/* Acciones */}
@@ -133,7 +149,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingVertical: 6,
   },
-  prefLabel: { fontSize: 14 },
+  prefTexts:  { flex: 1, paddingRight: 12 },
+  prefLabel:  { fontSize: 14 },
+  prefHint:   { fontSize: 11, marginTop: 2 },
+  prefAction: { fontSize: 12, fontWeight: "600", paddingVertical: 6 },
 
   actionRow: {
     flexDirection: "row",

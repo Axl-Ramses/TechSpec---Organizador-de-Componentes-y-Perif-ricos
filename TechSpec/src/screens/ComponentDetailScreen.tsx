@@ -6,6 +6,7 @@ import {
 import { useNavigation, useRoute, RouteProp } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { SafeAreaView } from "react-native-safe-area-context";
+import * as Clipboard from "expo-clipboard";
 
 import { HomeStackParamList } from "../navigation/types";
 import { CATEGORIES, Spec }   from "../../assets/data";
@@ -82,9 +83,49 @@ export default function ComponentDetailScreen() {
     }
   };
 
-  const shareSpecs = () => {
-    const text = specsLinkedList.toArray().map(s => `${s.key}: ${s.value}`).join("\n");
-    Alert.alert("Compartir", `${component.name}\n\n${text}`);
+  /**
+   * Arma la ficha completa como texto plano, recorriendo la Lista Enlazada de
+   * especificaciones, y la copia al portapapeles del dispositivo para poder
+   * pegarla en un chat, un correo o una búsqueda.
+   */
+  const buildFichaText = (): string => {
+    const lines: string[] = [];
+
+    lines.push(component.name);
+    if (component.model) lines.push(`Modelo: ${component.model}`);
+    if (cat)             lines.push(`Categoría: ${cat.name}`);
+
+    const specs = specsLinkedList.toArray();
+    if (specs.length > 0) {
+      lines.push("", "ESPECIFICACIONES");
+      for (const spec of specs) {
+        lines.push(`• ${spec.key}: ${spec.value}`);
+      }
+    }
+
+    if (component.notes) {
+      lines.push("", "NOTAS", component.notes);
+    }
+
+    if (component.tags.length > 0) {
+      lines.push("", `Etiquetas: ${component.tags.join(", ")}`);
+    }
+
+    lines.push("", "— Ficha generada con TechSpec");
+
+    return lines.join("\n");
+  };
+
+  const copyFicha = async () => {
+    try {
+      await Clipboard.setStringAsync(buildFichaText());
+      Alert.alert(
+        "Ficha copiada",
+        `Los datos de ${component.name} están en el portapapeles. Ya puedes pegarlos donde quieras.`
+      );
+    } catch {
+      Alert.alert("Error", "No se pudo copiar la ficha al portapapeles.");
+    }
   };
 
   const handleDelete = () => {
@@ -212,7 +253,7 @@ export default function ComponentDetailScreen() {
               />
             </View>
             <View style={styles.actionBtn}>
-              <CustomButton label="📤  Compartir" onPress={shareSpecs} variant="secondary" />
+              <CustomButton label="📋  Copiar ficha" onPress={copyFicha} variant="secondary" />
             </View>
           </View>
 
