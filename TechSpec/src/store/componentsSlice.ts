@@ -97,11 +97,16 @@ export const updateComponent = createAsyncThunk(
       .from("components")
       .update(patch)
       .eq("id", input.id)
-      .select()
-      .single();
+      .select();
 
     if (error) throw error;
-    return fromRow(data as ComponentRow);
+    if (!data || data.length === 0) {
+      // Sin filas devueltas = RLS bloqueó el UPDATE (falta la política de update)
+      throw new Error(
+        "No se pudo actualizar la ficha: la base de datos rechazó el cambio (permisos RLS)."
+      );
+    }
+    return fromRow(data[0] as ComponentRow);
   }
 );
 
