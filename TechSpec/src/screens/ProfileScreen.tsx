@@ -63,13 +63,6 @@ export default function ProfileScreen() {
         <View style={[styles.card, { backgroundColor: theme.card, borderColor: theme.border }]}>
           <Text style={[styles.cardTitle, { color: theme.textMuted }]}>ACCIONES</Text>
           <TouchableOpacity
-            style={styles.actionRow}
-            onPress={() => Alert.alert("Exportar", "Exportando datos como JSON…")}
-          >
-            <Text style={[styles.actionText, { color: theme.text }]}>📥 Exportar mis datos</Text>
-            <Text style={[styles.chevron, { color: theme.textMuted }]}>›</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
             style={[styles.actionRow, styles.actionLast]}
             onPress={() => Alert.alert("TechSpec v1.0.0", "Desarrollado con React Native + Expo + TypeScript")}
           >
