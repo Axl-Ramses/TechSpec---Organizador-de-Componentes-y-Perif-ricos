@@ -79,6 +79,32 @@ export const addComponent = createAsyncThunk(
   }
 );
 
+export type UpdateComponentInput = Partial<NewComponentInput> & { id: string };
+
+export const updateComponent = createAsyncThunk(
+  "components/update",
+  async (input: UpdateComponentInput) => {
+    const patch: Record<string, unknown> = { updated_at: new Date().toISOString() };
+    if (input.categoryId !== undefined) patch.category_id = input.categoryId;
+    if (input.name       !== undefined) patch.name        = input.name;
+    if (input.model      !== undefined) patch.model       = input.model;
+    if (input.notes      !== undefined) patch.notes       = input.notes;
+    if (input.tags       !== undefined) patch.tags        = input.tags;
+    if (input.specs      !== undefined) patch.specs       = input.specs;
+    if (input.hasImage   !== undefined) patch.has_image   = input.hasImage;
+
+    const { data, error } = await supabase
+      .from("components")
+      .update(patch)
+      .eq("id", input.id)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return fromRow(data as ComponentRow);
+  }
+);
+
 export const deleteComponent = createAsyncThunk(
   "components/delete",
   async (id: string) => {
@@ -108,6 +134,10 @@ const componentsSlice = createSlice({
       })
       .addCase(addComponent.fulfilled, (state, action) => {
         state.items.unshift(action.payload);
+      })
+      .addCase(updateComponent.fulfilled, (state, action) => {
+        const idx = state.items.findIndex(c => c.id === action.payload.id);
+        if (idx !== -1) state.items[idx] = action.payload;
       })
       .addCase(deleteComponent.fulfilled, (state, action) => {
         state.items = state.items.filter(c => c.id !== action.payload);

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo } from "react";
+import React, { useEffect, useLayoutEffect, useMemo } from "react";
 import {
   View, Text, StyleSheet, ScrollView,
   Image, Alert,
@@ -13,7 +13,7 @@ import { useTheme }    from "../context/ThemeContext";
 import SpecRow         from "../components/SpecRow";
 import Badge           from "../components/Badge";
 import CustomButton    from "../components/CustomButton";
-import { useAppDispatch } from "../store/hooks";
+import { useAppDispatch, useAppSelector } from "../store/hooks";
 import { deleteComponent } from "../store/componentsSlice";
 import { useStructures } from "../context/StructuresContext";
 
@@ -27,7 +27,15 @@ export default function ComponentDetailScreen() {
   const dispatch   = useAppDispatch();
   const { params } = useRoute<Route>();
   const { theme }  = useTheme();
-  const { component } = params;
+  // Tomamos la versión viva desde Redux para reflejar las ediciones al instante
+  const stored = useAppSelector(state =>
+    state.components.items.find(c => c.id === params.component.id)
+  );
+  const component = stored ?? params.component;
+
+  useLayoutEffect(() => {
+    navigation.setOptions({ title: component.name });
+  }, [navigation, component.name]);
 
   // ── Integración de Estructuras de Datos ──
   const {
@@ -151,7 +159,10 @@ export default function ComponentDetailScreen() {
             <View style={styles.actionBtn}>
               <CustomButton
                 label="✏️  Editar"
-                onPress={() => navigation.navigate("AddComponent", { categoryId: component.categoryId })}
+                onPress={() => navigation.navigate("AddComponent", {
+                  categoryId:  component.categoryId,
+                  componentId: component.id,
+                })}
               />
             </View>
             <View style={styles.actionBtn}>

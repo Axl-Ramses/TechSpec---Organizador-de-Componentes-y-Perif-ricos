@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useLayoutEffect } from "react";
 import {
   View, Text, StyleSheet, ScrollView,
   KeyboardAvoidingView, Platform, TouchableOpacity, Alert,
@@ -12,8 +12,8 @@ import { CATEGORIES, Spec } from "../../assets/data";
 import { useTheme }   from "../context/ThemeContext";
 import CustomInput    from "../components/CustomInput";
 import CustomButton   from "../components/CustomButton";
-import { useAppDispatch } from "../store/hooks";
-import { addComponent } from "../store/componentsSlice";
+import { useAppDispatch, useAppSelector } from "../store/hooks";
+import { addComponent, updateComponent } from "../store/componentsSlice";
 import { LinkedList } from "../structures/LinkedList";
 
 type Route = RouteProp<HomeStackParamList, "AddComponent">;
@@ -24,18 +24,37 @@ export default function AddComponentScreen() {
   const { theme }  = useTheme();
   const dispatch   = useAppDispatch();
 
+  // ── Modo edición: si llega un componentId, precargamos la ficha existente ──
+  const editingId = route.params?.componentId;
+  const existing  = useAppSelector(state =>
+    state.components.items.find(c => c.id === editingId)
+  );
+  const isEditing = !!existing;
+
   const [form, setForm] = useState({
-    categoryId: route.params?.categoryId ?? "",
-    name:  "",
-    model: "",
-    notes: "",
-    tags:  "",
+    categoryId: existing?.categoryId ?? route.params?.categoryId ?? "",
+    name:  existing?.name  ?? "",
+    model: existing?.model ?? "",
+    notes: existing?.notes ?? "",
+    tags:  existing?.tags?.join(", ") ?? "",
   });
+
+  useLayoutEffect(() => {
+    navigation.setOptions({ title: isEditing ? "Editar ficha" : "Nueva ficha" });
+  }, [navigation, isEditing]);
   const [errors, setErrors] = useState<{ categoryId?: string; name?: string }>({});
 
   // ── Estructura de Datos: Lista Enlazada Simple (LinkedList<Spec>) ──
-  const specsLinkedListRef = useRef(new LinkedList<Spec>());
-  const [specsDisplay, setSpecsDisplay] = useState<Spec[]>([]);
+  const specsLinkedListRef = useRef<LinkedList<Spec>>(
+    (() => {
+      const list = new LinkedList<Spec>();
+      for (const spec of existing?.specs ?? []) list.insert({ ...spec });
+      return list;
+    })()
+  );
+  const [specsDisplay, setSpecsDisplay] = useState<Spec[]>(
+    () => specsLinkedListRef.current.toArray()
+  );
   const [newSpecKey, setNewSpecKey]     = useState("");
   const [newSpecValue, setNewSpecValue] = useState("");
 
@@ -77,6 +96,23 @@ export default function AddComponentScreen() {
   const handleSave = async () => {
     if (!validate()) return;
     try {
+      if (isEditing && existing) {
+        await dispatch(updateComponent({
+          id:         existing.id,
+          categoryId: form.categoryId,
+          name:       form.name,
+          model:      form.model,
+          notes:      form.notes,
+          tags:       form.tags.split(",").map(t => t.trim()).filter(Boolean),
+          specs:      specsLinkedListRef.current.toArray(), // Extraído de la Lista Enlazada
+          hasImage:   existing.hasImage,
+        })).unwrap();
+        Alert.alert("¡Actualizado!", `${form.name} se guardó con ${specsLinkedListRef.current.size()} especificaciones.`, [
+          { text: "Aceptar", onPress: () => navigation.goBack() },
+        ]);
+        return;
+      }
+
       await dispatch(addComponent({
         categoryId: form.categoryId,
         name:       form.name,
@@ -217,7 +253,7 @@ export default function AddComponentScreen() {
             )}
           </View>
 
-          <CustomButton label="💾  Guardar ficha" onPress={handleSave} />
+          <CustomButton label={isEditing ? "💾  Guardar cambios" : "💾  Guardar ficha"} onPress={handleSave} />
           <CustomButton label="Cancelar" onPress={() => navigation.goBack()} variant="secondary" />
         </ScrollView>
       </KeyboardAvoidingView>

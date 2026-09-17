@@ -20,5 +20,5 @@ export type HomeStackParamList = {
   Home:            undefined;
   CategoryList:    { category: Category };
   ComponentDetail: { component: HardwareComponent };
-  AddComponent:    { categoryId?: string };
+  AddComponent:    { categoryId?: string; componentId?: string };
 };
