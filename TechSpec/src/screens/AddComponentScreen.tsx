@@ -19,7 +19,9 @@ import { LinkedList } from "../structures/LinkedList";
 type Route = RouteProp<HomeStackParamList, "AddComponent">;
 
 export default function AddComponentScreen() {
-  const navigation = useNavigation();
+  // La pantalla se monta tanto dentro de un stack como en la raíz del tab "Agregar",
+  // por lo que el navegador recibido no siempre es del mismo tipo.
+  const navigation = useNavigation<any>();
   const route      = useRoute<Route>();
   const { theme }  = useTheme();
   const dispatch   = useAppDispatch();
@@ -80,6 +82,36 @@ export default function AddComponentScreen() {
     setSpecsDisplay(specsLinkedListRef.current.toArray());
   };
 
+  /**
+   * Limpia el formulario y la Lista Enlazada de especificaciones. Necesario
+   * cuando la pantalla es la raíz del tab "Agregar": ahí no hay pantalla previa
+   * a la que volver, así que tras guardar hay que dejarla lista para otra ficha.
+   */
+  const resetForm = () => {
+    setForm({
+      categoryId: route.params?.categoryId ?? "",
+      name:  "",
+      model: "",
+      notes: "",
+      tags:  "",
+    });
+    setErrors({});
+    specsLinkedListRef.current.clear();
+    setSpecsDisplay([]);
+    setNewSpecKey("");
+    setNewSpecValue("");
+  };
+
+  /** Cierra la pantalla: vuelve atrás si hay historial; si no, limpia y va a "Mis specs". */
+  const closeAfterSave = () => {
+    if (navigation.canGoBack()) {
+      navigation.goBack();
+      return;
+    }
+    resetForm();
+    navigation.navigate("MySpecsTab");
+  };
+
   const set = (field: keyof typeof form) => (value: string) => {
     setForm(p => ({ ...p, [field]: value }));
     setErrors(p => ({ ...p, [field]: undefined }));
@@ -108,7 +140,7 @@ export default function AddComponentScreen() {
           hasImage:   existing.hasImage,
         })).unwrap();
         Alert.alert("¡Actualizado!", `${form.name} se guardó con ${specsLinkedListRef.current.size()} especificaciones.`, [
-          { text: "Aceptar", onPress: () => navigation.goBack() },
+          { text: "Aceptar", onPress: closeAfterSave },
         ]);
         return;
       }
@@ -123,7 +155,7 @@ export default function AddComponentScreen() {
         hasImage:   false,
       })).unwrap();
       Alert.alert("¡Guardado!", `${form.name} fue agregado con ${specsLinkedListRef.current.size()} especificaciones.`, [
-        { text: "Aceptar", onPress: () => navigation.goBack() },
+        { text: "Aceptar", onPress: closeAfterSave },
       ]);
     } catch (err: any) {
       Alert.alert("Error", err.message ?? "No se pudo guardar el componente");
@@ -254,7 +286,11 @@ export default function AddComponentScreen() {
           </View>
 
           <CustomButton label={isEditing ? "💾  Guardar cambios" : "💾  Guardar ficha"} onPress={handleSave} />
-          <CustomButton label="Cancelar" onPress={() => navigation.goBack()} variant="secondary" />
+          <CustomButton
+            label={navigation.canGoBack() ? "Cancelar" : "Limpiar formulario"}
+            onPress={() => (navigation.canGoBack() ? navigation.goBack() : resetForm())}
+            variant="secondary"
+          />
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>

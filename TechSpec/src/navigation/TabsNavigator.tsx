@@ -5,7 +5,7 @@ import { MainTabParamList } from "./types";
 import { useTheme } from "../context/ThemeContext";
 
 import HomeStackNavigator from "./HomeStackNavigator";
-import MySpecsScreen      from "../screens/MySpecsScreen";
+import MySpecsStackNavigator from "./MySpecsStackNavigator";
 import AddComponentScreen from "../screens/AddComponentScreen";
 import ProfileScreen      from "../screens/ProfileScreen";
 import { useAppDispatch } from "../store/hooks";
@@ -51,7 +51,7 @@ export default function TabNavigator() {
       })}
     >
       <Tab.Screen name="HomeTab"    component={HomeStackNavigator} options={{ tabBarLabel: "Inicio" }} />
-      <Tab.Screen name="MySpecsTab" component={MySpecsScreen}      options={{ tabBarLabel: "Mis specs" }} />
+      <Tab.Screen name="MySpecsTab" component={MySpecsStackNavigator} options={{ tabBarLabel: "Mis specs" }} />
       <Tab.Screen name="AddTab"     component={AddComponentScreen}  options={{ tabBarLabel: "Agregar" }} />
       <Tab.Screen name="ProfileTab" component={ProfileScreen}       options={{ tabBarLabel: "Perfil" }} />
     </Tab.Navigator>

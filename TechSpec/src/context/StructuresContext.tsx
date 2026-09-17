@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useRef, useMemo } from "react";
-import { Stack, LinkedList } from "../structures";
+import { Stack, LinkedList, Queue } from "../structures";
 import { HardwareComponent, Spec } from "../../assets/data";
 
 interface StructuresContextType {
@@ -18,10 +18,23 @@ interface StructuresContextType {
   peekUndo: () => HardwareComponent | null;
   undoStackSize: number;
 
+  // ── Cola de Comparación de Componentes (Queue - FIFO) ──
+  comparisonQueue: HardwareComponent[];
+  comparisonQueueSize: number;
+  comparisonQueueCapacity: number;
+  isQueuedForComparison: (id: string) => boolean;
+  enqueueForComparison: (component: HardwareComponent) => boolean;
+  dequeueFromComparison: () => HardwareComponent | null;
+  removeFromComparison: (id: string) => void;
+  clearComparison: () => void;
+
   // ── Fábrica / Utilidades de Listas Enlazadas ──
   createComponentsLinkedList: (items: HardwareComponent[]) => LinkedList<HardwareComponent>;
   createSpecsLinkedList: (specs: Spec[]) => LinkedList<Spec>;
 }
+
+// Capacidad máxima de la cola de comparación (FIFO acotada)
+const COMPARISON_CAPACITY = 3;
 
 const StructuresContext = createContext<StructuresContextType | undefined>(undefined);
 
@@ -29,11 +42,14 @@ export function StructuresProvider({ children }: { children: React.ReactNode }) 
   // Instancias persistentes de las estructuras basadas en POO
   const historyStackRef = useRef<Stack<HardwareComponent>>(new Stack<HardwareComponent>(15));
   const undoStackRef    = useRef<Stack<HardwareComponent>>(new Stack<HardwareComponent>(10));
+  // Cola FIFO acotada: solo tiene sentido comparar unas pocas piezas a la vez
+  const comparisonQueueRef = useRef<Queue<HardwareComponent>>(new Queue<HardwareComponent>(COMPARISON_CAPACITY));
 
   // Estados locales para forzar re-renderizados en la UI de React al mutar las estructuras
   const [recentlyViewed, setRecentlyViewed] = useState<HardwareComponent[]>([]);
   const [canUndo, setCanUndo]               = useState<boolean>(false);
   const [undoStackSize, setUndoStackSize]   = useState<number>(0);
+  const [comparisonQueue, setComparisonQueue] = useState<HardwareComponent[]>([]);
 
   // ── Operaciones de la Pila de Historial (LIFO) ──
   const pushRecentlyViewed = (component: HardwareComponent) => {
@@ -82,6 +98,43 @@ export function StructuresProvider({ children }: { children: React.ReactNode }) 
     return undoStackRef.current.peek();
   };
 
+  // ── Operaciones de la Cola de Comparación (FIFO) ──
+  const isQueuedForComparison = (id: string): boolean => {
+    return comparisonQueueRef.current.contains(c => c.id === id);
+  };
+
+  const enqueueForComparison = (component: HardwareComponent): boolean => {
+    const queue = comparisonQueueRef.current;
+
+    // Evitamos duplicados: el mismo componente no se compara contra sí mismo
+    if (queue.contains(c => c.id === component.id)) return false;
+
+    // Si la cola está llena, desencolamos el más antiguo (FIFO) y entra el nuevo
+    if (queue.isFull()) queue.dequeue();
+
+    const inserted = queue.enqueue(component);
+    setComparisonQueue(queue.toArray());
+    return inserted;
+  };
+
+  const dequeueFromComparison = (): HardwareComponent | null => {
+    const queue = comparisonQueueRef.current;
+    const removed = queue.dequeue(); // Sale el primero que entró (FIFO)
+    setComparisonQueue(queue.toArray());
+    return removed;
+  };
+
+  const removeFromComparison = (id: string) => {
+    const queue = comparisonQueueRef.current;
+    queue.removeIf(c => c.id === id);
+    setComparisonQueue(queue.toArray());
+  };
+
+  const clearComparison = () => {
+    comparisonQueueRef.current.clear();
+    setComparisonQueue([]);
+  };
+
   // ── Operaciones con Listas Enlazadas ──
   const createComponentsLinkedList = (items: HardwareComponent[]): LinkedList<HardwareComponent> => {
     return LinkedList.fromArray(items);
@@ -105,9 +158,18 @@ export function StructuresProvider({ children }: { children: React.ReactNode }) 
     peekUndo,
     undoStackSize,
 
+    comparisonQueue,
+    comparisonQueueSize: comparisonQueue.length,
+    comparisonQueueCapacity: COMPARISON_CAPACITY,
+    isQueuedForComparison,
+    enqueueForComparison,
+    dequeueFromComparison,
+    removeFromComparison,
+    clearComparison,
+
     createComponentsLinkedList,
     createSpecsLinkedList,
-  }), [recentlyViewed, canUndo, undoStackSize]);
+  }), [recentlyViewed, canUndo, undoStackSize, comparisonQueue]);
 
   return (
     <StructuresContext.Provider value={value}>

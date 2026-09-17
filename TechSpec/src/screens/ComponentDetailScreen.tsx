@@ -1,7 +1,7 @@
 import React, { useEffect, useLayoutEffect, useMemo } from "react";
 import {
   View, Text, StyleSheet, ScrollView,
-  Image, Alert,
+  Image, Alert, TouchableOpacity,
 } from "react-native";
 import { useNavigation, useRoute, RouteProp } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -42,6 +42,11 @@ export default function ComponentDetailScreen() {
     pushRecentlyViewed,
     pushUndo,
     createSpecsLinkedList,
+    comparisonQueueSize,
+    comparisonQueueCapacity,
+    isQueuedForComparison,
+    enqueueForComparison,
+    removeFromComparison,
   } = useStructures();
 
   // 1. Pila (Stack - LIFO): Apila este componente en el historial de vistos recientemente
@@ -55,6 +60,27 @@ export default function ComponentDetailScreen() {
   }, [component.specs]);
 
   const cat = CATEGORIES.find(c => c.id === component.categoryId);
+
+  // 3. Cola (Queue - FIFO): encola el componente para compararlo con otros
+  const inComparison = isQueuedForComparison(component.id);
+
+  const handleToggleComparison = () => {
+    if (inComparison) {
+      removeFromComparison(component.id);
+      return;
+    }
+
+    const wasFull = comparisonQueueSize >= comparisonQueueCapacity;
+    enqueueForComparison(component);
+
+    if (wasFull) {
+      // Cola llena: por FIFO sale el primero que entró para dejar entrar este
+      Alert.alert(
+        "Cola FIFO llena",
+        `La cola admite ${comparisonQueueCapacity} componentes. Salió el más antiguo para encolar "${component.name}".`
+      );
+    }
+  };
 
   const shareSpecs = () => {
     const text = specsLinkedList.toArray().map(s => `${s.key}: ${s.value}`).join("\n");
@@ -154,6 +180,26 @@ export default function ComponentDetailScreen() {
             <Text style={[styles.metaText, { color: theme.textMuted }]}>Actualizado: {component.updatedAt}</Text>
           </View>
 
+          {/* Cola de Comparación (FIFO) */}
+          <View style={styles.compareWrap}>
+            <CustomButton
+              label={inComparison ? "⚖️  Quitar de la comparación" : "⚖️  Comparar este componente"}
+              onPress={handleToggleComparison}
+              variant="secondary"
+            />
+            {comparisonQueueSize > 0 && (
+              <TouchableOpacity
+                style={styles.compareLink}
+                onPress={() => navigation.navigate("Compare")}
+                activeOpacity={0.7}
+              >
+                <Text style={[styles.compareLinkText, { color: theme.brand }]}>
+                  Ver comparación · Cola FIFO {comparisonQueueSize}/{comparisonQueueCapacity} →
+                </Text>
+              </TouchableOpacity>
+            )}
+          </View>
+
           {/* Acciones — fila flexbox */}
           <View style={styles.actionsRow}>
             <View style={styles.actionBtn}>
@@ -246,6 +292,17 @@ const styles = StyleSheet.create({
   actionBtn:  { flex: 1 },
   deleteWrap: {
     marginTop: 10,
+  },
+  compareWrap: {
+    marginBottom: 10,
+  },
+  compareLink: {
+    alignItems: "center",
+    paddingVertical: 8,
+  },
+  compareLinkText: {
+    fontSize: 12,
+    fontWeight: "600",
   },
   cardHeaderWithBadge: {
     flexDirection: "row",

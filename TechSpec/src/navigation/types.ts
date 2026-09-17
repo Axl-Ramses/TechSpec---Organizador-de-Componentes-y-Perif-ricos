@@ -21,4 +21,13 @@ export type HomeStackParamList = {
   CategoryList:    { category: Category };
   ComponentDetail: { component: HardwareComponent };
   AddComponent:    { categoryId?: string; componentId?: string };
+  Compare:         undefined;
+};
+
+// Stack dentro del tab Mis specs
+export type MySpecsStackParamList = {
+  MySpecs:         undefined;
+  ComponentDetail: { component: HardwareComponent };
+  AddComponent:    { categoryId?: string; componentId?: string };
+  Compare:         undefined;
 };
