@@ -17,6 +17,7 @@ import CustomButton    from "../components/CustomButton";
 import { useAppDispatch, useAppSelector } from "../store/hooks";
 import { deleteComponent } from "../store/componentsSlice";
 import { useStructures } from "../context/StructuresContext";
+import { getComponentImageUrl } from "../lib/storageClient";
 
 type Nav   = NativeStackNavigationProp<HomeStackParamList, "ComponentDetail">;
 type Route = RouteProp<HomeStackParamList, "ComponentDetail">;
@@ -158,17 +159,24 @@ export default function ComponentDetailScreen() {
     <SafeAreaView style={[styles.safe, { backgroundColor: theme.background }]}>
       <ScrollView showsVerticalScrollIndicator={false}>
 
-        {/* Hero con imagen local */}
+        {/* Hero con imagen remota de Supabase o emoji de categoría */}
         <View style={[styles.hero, { backgroundColor: theme.brandDark }]}>
-          {component.hasImage ? (
-            <Image
-              source={require("../../assets/icon.png")}
-              style={styles.heroBg}
-              resizeMode="contain"
-            />
-          ) : (
-            <Text style={styles.heroEmoji}>{cat?.emoji ?? "📦"}</Text>
-          )}
+          {(() => {
+            const imageUrl = component.imageUrl || (component.hasImage ? getComponentImageUrl(component) : null);
+            if (imageUrl) {
+              return (
+                <>
+                  <Image
+                    source={{ uri: imageUrl }}
+                    style={styles.heroBg}
+                    resizeMode="cover"
+                  />
+                  <View style={styles.heroOverlay} />
+                </>
+              );
+            }
+            return <Text style={styles.heroEmoji}>{cat?.emoji ?? "📦"}</Text>;
+          })()}
           <View style={styles.heroContent}>
             <Text style={styles.heroName}>{component.name}</Text>
             <Text style={styles.heroMeta}>{cat?.name} · {component.model}</Text>
@@ -284,7 +292,11 @@ const styles = StyleSheet.create({
     position: "absolute",
     width: "100%",
     height: "100%",
-    opacity: 0.15,
+    opacity: 0.6,
+  },
+  heroOverlay: {
+    ...StyleSheet.absoluteFill,
+    backgroundColor: "rgba(0,0,0,0.4)",
   },
   heroEmoji: { fontSize: 60, opacity: 0.4, position: "absolute" },
   heroContent: {

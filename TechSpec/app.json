@@ -30,7 +30,14 @@
     "owner": "axl-ramses",
     "plugins": [
       "expo-font",
-      "expo-status-bar"
+      "expo-status-bar",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "TechSpec necesita acceso a tus fotos para seleccionar imágenes de tus componentes de hardware.",
+          "cameraPermission": "TechSpec necesita acceso a tu cámara para capturar fotos de tus componentes de hardware."
+        }
+      ]
     ]
   }
 }

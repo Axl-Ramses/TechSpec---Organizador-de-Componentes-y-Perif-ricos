@@ -1,8 +1,9 @@
 import React from "react";
-import { TouchableOpacity, View, Text, StyleSheet } from "react-native";
+import { TouchableOpacity, View, Text, StyleSheet, Image } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { HardwareComponent, CATEGORIES } from "../../assets/data";
 import { useTheme } from "../context/ThemeContext";
+import { getComponentImageUrl } from "../lib/storageClient";
 
 interface Props {
   component: HardwareComponent;
@@ -12,6 +13,7 @@ interface Props {
 export default function ComponentCard({ component, onPress }: Props) {
   const { theme } = useTheme();
   const cat = CATEGORIES.find(c => c.id === component.categoryId);
+  const imageUrl = component.imageUrl || (component.hasImage ? getComponentImageUrl(component) : null);
 
   return (
     <TouchableOpacity
@@ -19,9 +21,13 @@ export default function ComponentCard({ component, onPress }: Props) {
       onPress={onPress}
       activeOpacity={0.8}
     >
-      {/* Flexbox: fila con ícono → info → chevron */}
+      {/* Flexbox: fila con ícono/imagen → info → chevron */}
       <View style={[styles.iconBox, { backgroundColor: cat?.bgColor ?? theme.brandLight }]}>
-        <Text style={styles.emoji}>{cat?.emoji ?? "📦"}</Text>
+        {imageUrl ? (
+          <Image source={{ uri: imageUrl }} style={styles.thumbImage} resizeMode="cover" />
+        ) : (
+          <Text style={styles.emoji}>{cat?.emoji ?? "📦"}</Text>
+        )}
       </View>
 
       <View style={styles.info}>
@@ -56,6 +62,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     flexShrink: 0,
+    overflow: "hidden",
+  },
+  thumbImage: {
+    width: "100%",
+    height: "100%",
   },
   emoji: { fontSize: 22 },
   info: {

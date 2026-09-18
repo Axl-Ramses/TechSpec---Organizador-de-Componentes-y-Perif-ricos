@@ -23,6 +23,7 @@ export interface HardwareComponent {
   tags:       string[];
   specs:      Spec[];
   hasImage:   boolean;
+  imageUrl?:  string;
   createdAt:  string;
   updatedAt:  string;
 }

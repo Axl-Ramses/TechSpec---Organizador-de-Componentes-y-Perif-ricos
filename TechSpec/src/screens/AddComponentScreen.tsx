@@ -1,11 +1,12 @@
 import React, { useState, useRef, useLayoutEffect } from "react";
 import {
   View, Text, StyleSheet, ScrollView,
-  KeyboardAvoidingView, Platform, TouchableOpacity, Alert,
+  KeyboardAvoidingView, Platform, TouchableOpacity, Alert, Image,
 } from "react-native";
 import { useNavigation, useRoute, RouteProp } from "@react-navigation/native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
+import * as ImagePicker from "expo-image-picker";
 
 import { HomeStackParamList } from "../navigation/types";
 import { CATEGORIES, Spec } from "../../assets/data";
@@ -16,6 +17,7 @@ import { useAppDispatch, useAppSelector } from "../store/hooks";
 import { addComponent, updateComponent } from "../store/componentsSlice";
 import { LinkedList } from "../structures/LinkedList";
 import { useStructures } from "../context/StructuresContext";
+import { uploadToStorage, getComponentImageUrl, type UploadInput } from "../lib/storageClient";
 
 type Route = RouteProp<HomeStackParamList, "AddComponent">;
 
@@ -48,6 +50,74 @@ export default function AddComponentScreen() {
   }, [navigation, isEditing]);
   const [errors, setErrors] = useState<{ categoryId?: string; name?: string }>({});
   const [submitting, setSubmitting] = useState(false);
+  const [selectedImage, setSelectedImage] = useState<UploadInput | null>(null);
+  const [currentImageUrl, setCurrentImageUrl] = useState<string | null>(
+    existing ? getComponentImageUrl(existing) : null
+  );
+
+  const handlePickImage = async () => {
+    try {
+      const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!permission.granted) {
+        Alert.alert("Permiso denegado", "Se necesita permiso para acceder a la galería.");
+        return;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ["images"],
+        allowsEditing: true,
+        quality: 0.8,
+        base64: true,
+      });
+
+      if (result.canceled || !result.assets?.length) return;
+
+      const asset = result.assets[0];
+      setSelectedImage({
+        uri: asset.uri,
+        name: asset.fileName ?? `component-${Date.now()}.jpg`,
+        mimeType: asset.mimeType ?? "image/jpeg",
+        base64: asset.base64,
+      });
+      setCurrentImageUrl(asset.uri);
+    } catch (err: any) {
+      Alert.alert("Error", err.message ?? "No se pudo seleccionar la imagen");
+    }
+  };
+
+  const handleTakePhoto = async () => {
+    try {
+      const permission = await ImagePicker.requestCameraPermissionsAsync();
+      if (!permission.granted) {
+        Alert.alert("Permiso denegado", "Se necesita permiso para acceder a la cámara.");
+        return;
+      }
+
+      const result = await ImagePicker.launchCameraAsync({
+        allowsEditing: true,
+        quality: 0.8,
+        base64: true,
+      });
+
+      if (result.canceled || !result.assets?.length) return;
+
+      const asset = result.assets[0];
+      setSelectedImage({
+        uri: asset.uri,
+        name: asset.fileName ?? `component-${Date.now()}.jpg`,
+        mimeType: asset.mimeType ?? "image/jpeg",
+        base64: asset.base64,
+      });
+      setCurrentImageUrl(asset.uri);
+    } catch (err: any) {
+      Alert.alert("Error", err.message ?? "No se pudo capturar la foto");
+    }
+  };
+
+  const handleRemoveImage = () => {
+    setSelectedImage(null);
+    setCurrentImageUrl(null);
+  };
 
   // ── Estructura de Datos: Lista Enlazada Simple (LinkedList<Spec>) ──
   const specsLinkedListRef = useRef<LinkedList<Spec>>(
@@ -147,6 +217,8 @@ export default function AddComponentScreen() {
     setNewSpecKey("");
     setNewSpecValue("");
     setEditingSpecKey(null);
+    setSelectedImage(null);
+    setCurrentImageUrl(null);
   };
 
   /** Cierra la pantalla: vuelve atrás si hay historial; si no, limpia y va a "Mis specs". */
@@ -176,6 +248,16 @@ export default function AddComponentScreen() {
     if (!validate()) return;
     setSubmitting(true);
     try {
+      let finalImageUrl = currentImageUrl ?? undefined;
+      let finalHasImage = !!currentImageUrl;
+
+      // Si el usuario seleccionó una imagen nueva, la subimos al bucket de Supabase
+      if (selectedImage) {
+        const uploadResult = await uploadToStorage(selectedImage);
+        finalImageUrl = uploadResult.publicUrl;
+        finalHasImage = true;
+      }
+
       if (isEditing && existing) {
         const updated = await dispatch(updateComponent({
           id:         existing.id,
@@ -185,7 +267,8 @@ export default function AddComponentScreen() {
           notes:      form.notes,
           tags:       form.tags.split(",").map(t => t.trim()).filter(Boolean),
           specs:      specsLinkedListRef.current.toArray(), // Extraído de la Lista Enlazada
-          hasImage:   existing.hasImage,
+          hasImage:   finalHasImage,
+          imageUrl:   finalImageUrl,
         })).unwrap();
 
         // Sincroniza la versión actualizada en las estructuras de datos (Pila y Cola)
@@ -204,7 +287,8 @@ export default function AddComponentScreen() {
         notes:      form.notes,
         tags:       form.tags.split(",").map(t => t.trim()).filter(Boolean),
         specs:      specsLinkedListRef.current.toArray(), // Extraído de la Lista Enlazada
-        hasImage:   false,
+        hasImage:   finalHasImage,
+        imageUrl:   finalImageUrl,
       })).unwrap();
       Alert.alert("¡Guardado!", `${form.name} fue agregado con ${specsLinkedListRef.current.size()} especificaciones.`, [
         { text: "Aceptar", onPress: closeAfterSave },
@@ -273,6 +357,62 @@ export default function AddComponentScreen() {
           <CustomInput label="Modelo / SKU"          value={form.model} onChangeText={set("model")} placeholder="Ej. 100-100000263BOX" />
           <CustomInput label="Notas técnicas"        value={form.notes} onChangeText={set("notes")} placeholder="Latencias, voltajes, configs..." multiline numberOfLines={4} />
           <CustomInput label="Etiquetas (coma)"      value={form.tags}  onChangeText={set("tags")}  placeholder="APU, AM4, OC" />
+
+          {/* Sección de Fotografía (Supabase Storage) */}
+          <View style={styles.imageSection}>
+            <Text style={[styles.sectionLabel, { color: theme.textSub }]}>
+              FOTOGRAFÍA DEL COMPONENTE (SUPABASE STORAGE)
+            </Text>
+
+            {currentImageUrl ? (
+              <View style={[styles.imagePreviewWrap, { backgroundColor: theme.card, borderColor: theme.border }]}>
+                <Image source={{ uri: currentImageUrl }} style={styles.imagePreview} resizeMode="cover" />
+                <View style={styles.imageActions}>
+                  <TouchableOpacity
+                    style={[styles.imgActionBtn, { borderColor: theme.border, backgroundColor: theme.card }]}
+                    onPress={handlePickImage}
+                  >
+                    <Ionicons name="images-outline" size={15} color={theme.brand} />
+                    <Text style={[styles.imgActionText, { color: theme.brand }]}>Cambiar</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.imgActionBtn, { borderColor: theme.border, backgroundColor: theme.card }]}
+                    onPress={handleTakePhoto}
+                  >
+                    <Ionicons name="camera-outline" size={15} color={theme.brand} />
+                    <Text style={[styles.imgActionText, { color: theme.brand }]}>Cámara</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.imgActionBtn, { borderColor: theme.danger, backgroundColor: theme.card }]}
+                    onPress={handleRemoveImage}
+                  >
+                    <Ionicons name="trash-outline" size={15} color={theme.danger} />
+                    <Text style={[styles.imgActionText, { color: theme.danger }]}>Quitar</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            ) : (
+              <View style={styles.imageButtonsRow}>
+                <TouchableOpacity
+                  style={[styles.imagePickBtn, { backgroundColor: theme.card, borderColor: theme.border }]}
+                  onPress={handlePickImage}
+                  activeOpacity={0.8}
+                >
+                  <Ionicons name="images-outline" size={20} color={theme.brand} />
+                  <Text style={[styles.imagePickBtnText, { color: theme.text }]}>Elegir de Galería</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[styles.imagePickBtn, { backgroundColor: theme.card, borderColor: theme.border }]}
+                  onPress={handleTakePhoto}
+                  activeOpacity={0.8}
+                >
+                  <Ionicons name="camera-outline" size={20} color={theme.brand} />
+                  <Text style={[styles.imagePickBtnText, { color: theme.text }]}>Tomar Foto</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+          </View>
 
           {/* Sección de Especificaciones Técnicas con Lista Enlazada */}
           <View style={styles.specsSection}>
@@ -510,6 +650,59 @@ const styles = StyleSheet.create({
   specChipVal: {
     fontSize: 12,
     flex: 1,
+  },
+
+  // Sección de imagen / Supabase Storage
+  imageSection: {
+    marginVertical: 14,
+  },
+  imagePreviewWrap: {
+    borderRadius: 14,
+    borderWidth: 0.5,
+    overflow: "hidden",
+    alignItems: "center",
+    paddingBottom: 10,
+  },
+  imagePreview: {
+    width: "100%",
+    height: 180,
+  },
+  imageActions: {
+    flexDirection: "row",
+    gap: 8,
+    marginTop: 10,
+    paddingHorizontal: 12,
+  },
+  imgActionBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    borderWidth: 0.5,
+  },
+  imgActionText: {
+    fontSize: 12,
+    fontWeight: "500",
+  },
+  imageButtonsRow: {
+    flexDirection: "row",
+    gap: 10,
+  },
+  imagePickBtn: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    paddingVertical: 14,
+    borderRadius: 12,
+    borderWidth: 0.5,
+  },
+  imagePickBtnText: {
+    fontSize: 13,
+    fontWeight: "500",
   },
 });
 

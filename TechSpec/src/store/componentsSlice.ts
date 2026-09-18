@@ -23,22 +23,35 @@ interface ComponentRow {
   tags: string[];
   specs: { key: string; value: string }[];
   has_image: boolean;
+  image_url?: string | null;
   created_at: string;
   updated_at: string;
 }
 
-const fromRow = (row: ComponentRow): HardwareComponent => ({
-  id: row.id,
-  categoryId: row.category_id,
-  name: row.name,
-  model: row.model,
-  notes: row.notes,
-  tags: row.tags ?? [],
-  specs: row.specs ?? [],
-  hasImage: row.has_image,
-  createdAt: row.created_at,
-  updatedAt: row.updated_at,
-});
+const fromRow = (row: ComponentRow): HardwareComponent => {
+  let imageUrl = row.image_url ?? undefined;
+  if (!imageUrl && row.has_image) {
+    const bucket = process.env.EXPO_PUBLIC_SUPABASE_BUCKET || "uploads";
+    const { data } = supabase.storage
+      .from(bucket)
+      .getPublicUrl(`components/${row.id}.jpg`);
+    imageUrl = data.publicUrl;
+  }
+
+  return {
+    id: row.id,
+    categoryId: row.category_id,
+    name: row.name,
+    model: row.model,
+    notes: row.notes,
+    tags: row.tags ?? [],
+    specs: row.specs ?? [],
+    hasImage: row.has_image,
+    imageUrl,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+};
 
 export type NewComponentInput = Omit<HardwareComponent, "id" | "createdAt" | "updatedAt">;
 
@@ -59,23 +72,42 @@ export const addComponent = createAsyncThunk(
   async (input: NewComponentInput) => {
     const { data: userData } = await supabase.auth.getUser();
 
-    const { data, error } = await supabase
+    const insertPayload: Record<string, unknown> = {
+      category_id: input.categoryId,
+      name:        input.name,
+      model:       input.model,
+      notes:       input.notes,
+      tags:        input.tags,
+      specs:       input.specs,
+      has_image:   input.hasImage,
+      user_id:     userData.user?.id,
+    };
+    if (input.imageUrl) {
+      insertPayload.image_url = input.imageUrl;
+    }
+
+    let { data, error } = await supabase
       .from("components")
-      .insert({
-        category_id: input.categoryId,
-        name:        input.name,
-        model:       input.model,
-        notes:       input.notes,
-        tags:        input.tags,
-        specs:       input.specs,
-        has_image:   input.hasImage,
-        user_id:     userData.user?.id,
-      })
+      .insert(insertPayload)
       .select()
       .single();
 
+    // Si la columna image_url no existe en la BD, reintentamos sin ella
+    if (error && error.message?.includes("image_url")) {
+      delete insertPayload.image_url;
+      const retry = await supabase
+        .from("components")
+        .insert(insertPayload)
+        .select()
+        .single();
+      data = retry.data;
+      error = retry.error;
+    }
+
     if (error) throw error;
-    return fromRow(data as ComponentRow);
+    const comp = fromRow(data as ComponentRow);
+    if (input.imageUrl) comp.imageUrl = input.imageUrl;
+    return comp;
   }
 );
 
@@ -92,12 +124,25 @@ export const updateComponent = createAsyncThunk(
     if (input.tags       !== undefined) patch.tags        = input.tags;
     if (input.specs      !== undefined) patch.specs       = input.specs;
     if (input.hasImage   !== undefined) patch.has_image   = input.hasImage;
+    if (input.imageUrl   !== undefined) patch.image_url   = input.imageUrl;
 
-    const { data, error } = await supabase
+    let { data, error } = await supabase
       .from("components")
       .update(patch)
       .eq("id", input.id)
       .select();
+
+    // Si la columna image_url no existe en la tabla de Supabase, reintentamos sin ella
+    if (error && error.message?.includes("image_url")) {
+      delete patch.image_url;
+      const retry = await supabase
+        .from("components")
+        .update(patch)
+        .eq("id", input.id)
+        .select();
+      data = retry.data;
+      error = retry.error;
+    }
 
     if (error) throw error;
     if (!data || data.length === 0) {
@@ -106,7 +151,9 @@ export const updateComponent = createAsyncThunk(
         "No se pudo actualizar la ficha: la base de datos rechazó el cambio (permisos RLS)."
       );
     }
-    return fromRow(data[0] as ComponentRow);
+    const comp = fromRow(data[0] as ComponentRow);
+    if (input.imageUrl) comp.imageUrl = input.imageUrl;
+    return comp;
   }
 );
 
