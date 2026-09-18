@@ -185,6 +185,28 @@ export class Queue<T> {
   }
 
   /**
+   * Reemplaza el dato del primer nodo que coincida con el predicado,
+   * conservando el orden FIFO y la integridad de la cola.
+   * Complejidad: O(n)
+   * @param predicate Condición para ubicar el elemento a actualizar
+   * @param newData Nuevo valor a asignar
+   * @returns true si se actualizó el nodo, false si no se encontró
+   */
+  public replaceIf(predicate: (item: T) => boolean, newData: T): boolean {
+    let current = this.front;
+
+    while (current !== null) {
+      if (predicate(current.data)) {
+        current.data = newData;
+        return true;
+      }
+      current = current.next;
+    }
+
+    return false;
+  }
+
+  /**
    * Vacía completamente la cola.
    * Complejidad: O(1)
    */

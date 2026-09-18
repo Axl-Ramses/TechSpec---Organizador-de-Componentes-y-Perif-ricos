@@ -15,6 +15,7 @@ import CustomButton   from "../components/CustomButton";
 import { useAppDispatch, useAppSelector } from "../store/hooks";
 import { addComponent, updateComponent } from "../store/componentsSlice";
 import { LinkedList } from "../structures/LinkedList";
+import { useStructures } from "../context/StructuresContext";
 
 type Route = RouteProp<HomeStackParamList, "AddComponent">;
 
@@ -25,6 +26,7 @@ export default function AddComponentScreen() {
   const route      = useRoute<Route>();
   const { theme }  = useTheme();
   const dispatch   = useAppDispatch();
+  const { updateComponentInStructures } = useStructures();
 
   // ── Modo edición: si llega un componentId, precargamos la ficha existente ──
   const editingId = route.params?.componentId;
@@ -45,6 +47,7 @@ export default function AddComponentScreen() {
     navigation.setOptions({ title: isEditing ? "Editar ficha" : "Nueva ficha" });
   }, [navigation, isEditing]);
   const [errors, setErrors] = useState<{ categoryId?: string; name?: string }>({});
+  const [submitting, setSubmitting] = useState(false);
 
   // ── Estructura de Datos: Lista Enlazada Simple (LinkedList<Spec>) ──
   const specsLinkedListRef = useRef<LinkedList<Spec>>(
@@ -57,26 +60,69 @@ export default function AddComponentScreen() {
   const [specsDisplay, setSpecsDisplay] = useState<Spec[]>(
     () => specsLinkedListRef.current.toArray()
   );
-  const [newSpecKey, setNewSpecKey]     = useState("");
-  const [newSpecValue, setNewSpecValue] = useState("");
+  const [newSpecKey, setNewSpecKey]         = useState("");
+  const [newSpecValue, setNewSpecValue]     = useState("");
+  const [editingSpecKey, setEditingSpecKey] = useState<string | null>(null);
 
-  const handleAddSpecNode = () => {
-    if (!newSpecKey.trim() || !newSpecValue.trim()) {
+  /**
+   * Agrega o actualiza un nodo en la Lista Enlazada de especificaciones.
+   * Si está en modo edición de spec, utiliza LinkedList.update (O(n)).
+   * Si es nueva, utiliza LinkedList.insert (O(1)).
+   */
+  const handleSaveSpecNode = () => {
+    const key = newSpecKey.trim();
+    const value = newSpecValue.trim();
+
+    if (!key || !value) {
       Alert.alert("Atención", "Ingresa el nombre y valor de la especificación.");
       return;
     }
-    // Inserción en la lista enlazada (O(1))
-    specsLinkedListRef.current.insert({
-      key: newSpecKey.trim(),
-      value: newSpecValue.trim(),
-    });
+
+    if (editingSpecKey !== null) {
+      // Modo edición de spec: actualiza el nodo en la Lista Enlazada
+      specsLinkedListRef.current.update(
+        s => s.key.toLowerCase() === editingSpecKey.toLowerCase(),
+        { key, value }
+      );
+      setEditingSpecKey(null);
+    } else {
+      // Verifica si ya existe una clave idéntica para prevenir duplicados
+      const exists = specsLinkedListRef.current.find(
+        s => s.key.toLowerCase() === key.toLowerCase()
+      );
+      if (exists) {
+        Alert.alert(
+          "Especificación existente",
+          `La clave "${key}" ya existe. Tócala en la lista para editar su valor o usa otro nombre.`
+        );
+        return;
+      }
+      // Inserción en la lista enlazada (O(1))
+      specsLinkedListRef.current.insert({ key, value });
+    }
+
     // Actualizamos la vista recorriendo la lista enlazada (O(n))
     setSpecsDisplay(specsLinkedListRef.current.toArray());
     setNewSpecKey("");
     setNewSpecValue("");
   };
 
+  const handleStartEditSpec = (spec: Spec) => {
+    setEditingSpecKey(spec.key);
+    setNewSpecKey(spec.key);
+    setNewSpecValue(spec.value);
+  };
+
+  const handleCancelEditSpec = () => {
+    setEditingSpecKey(null);
+    setNewSpecKey("");
+    setNewSpecValue("");
+  };
+
   const handleRemoveSpecNode = (keyToRemove: string) => {
+    if (editingSpecKey === keyToRemove) {
+      handleCancelEditSpec();
+    }
     // Eliminación del nodo en la lista enlazada (O(n))
     specsLinkedListRef.current.delete(s => s.key === keyToRemove);
     setSpecsDisplay(specsLinkedListRef.current.toArray());
@@ -100,6 +146,7 @@ export default function AddComponentScreen() {
     setSpecsDisplay([]);
     setNewSpecKey("");
     setNewSpecValue("");
+    setEditingSpecKey(null);
   };
 
   /** Cierra la pantalla: vuelve atrás si hay historial; si no, limpia y va a "Mis specs". */
@@ -127,9 +174,10 @@ export default function AddComponentScreen() {
 
   const handleSave = async () => {
     if (!validate()) return;
+    setSubmitting(true);
     try {
       if (isEditing && existing) {
-        await dispatch(updateComponent({
+        const updated = await dispatch(updateComponent({
           id:         existing.id,
           categoryId: form.categoryId,
           name:       form.name,
@@ -139,6 +187,10 @@ export default function AddComponentScreen() {
           specs:      specsLinkedListRef.current.toArray(), // Extraído de la Lista Enlazada
           hasImage:   existing.hasImage,
         })).unwrap();
+
+        // Sincroniza la versión actualizada en las estructuras de datos (Pila y Cola)
+        updateComponentInStructures(updated);
+
         Alert.alert("¡Actualizado!", `${form.name} se guardó con ${specsLinkedListRef.current.size()} especificaciones.`, [
           { text: "Aceptar", onPress: closeAfterSave },
         ]);
@@ -159,6 +211,8 @@ export default function AddComponentScreen() {
       ]);
     } catch (err: any) {
       Alert.alert("Error", err.message ?? "No se pudo guardar el componente");
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -251,45 +305,93 @@ export default function AddComponentScreen() {
               </View>
             </View>
 
-            <TouchableOpacity
-              style={[styles.addSpecBtn, { backgroundColor: theme.card, borderColor: theme.border }]}
-              onPress={handleAddSpecNode}
-            >
-              <Ionicons name="add-circle" size={18} color={theme.brand} />
-              <Text style={[styles.addSpecBtnText, { color: theme.brand }]}>
-                Insertar en Lista Enlazada
-              </Text>
-            </TouchableOpacity>
+            <View style={styles.specActionsRow}>
+              <TouchableOpacity
+                style={[
+                  styles.addSpecBtn,
+                  {
+                    backgroundColor: editingSpecKey ? theme.brand : theme.card,
+                    borderColor:     editingSpecKey ? theme.brand : theme.border,
+                    flex: 1,
+                  },
+                ]}
+                onPress={handleSaveSpecNode}
+              >
+                <Ionicons
+                  name={editingSpecKey ? "checkmark-circle" : "add-circle"}
+                  size={18}
+                  color={editingSpecKey ? theme.white : theme.brand}
+                />
+                <Text
+                  style={[
+                    styles.addSpecBtnText,
+                    { color: editingSpecKey ? theme.white : theme.brand },
+                  ]}
+                >
+                  {editingSpecKey ? "Actualizar en Lista Enlazada" : "Insertar en Lista Enlazada"}
+                </Text>
+              </TouchableOpacity>
+
+              {editingSpecKey && (
+                <TouchableOpacity
+                  style={[styles.cancelSpecBtn, { borderColor: theme.border, backgroundColor: theme.card }]}
+                  onPress={handleCancelEditSpec}
+                >
+                  <Text style={[styles.cancelSpecBtnText, { color: theme.textSub }]}>Cancelar</Text>
+                </TouchableOpacity>
+              )}
+            </View>
 
             {/* Lista de nodos agregados */}
             {specsDisplay.length > 0 && (
               <View style={styles.specsListWrap}>
-                {specsDisplay.map((spec, index) => (
-                  <View
-                    key={`${spec.key}-${index}`}
-                    style={[styles.specChip, { backgroundColor: theme.card, borderColor: theme.border }]}
-                  >
-                    <View style={styles.specChipTexts}>
-                      <Text style={[styles.specChipKey, { color: theme.brand }]}>{spec.key}:</Text>
-                      <Text style={[styles.specChipVal, { color: theme.text }]}>{spec.value}</Text>
-                    </View>
-                    <TouchableOpacity
-                      onPress={() => handleRemoveSpecNode(spec.key)}
-                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                {specsDisplay.map((spec, index) => {
+                  const isBeingEdited = editingSpecKey === spec.key;
+                  return (
+                    <View
+                      key={`${spec.key}-${index}`}
+                      style={[
+                        styles.specChip,
+                        {
+                          backgroundColor: isBeingEdited ? theme.brandLight : theme.card,
+                          borderColor:     isBeingEdited ? theme.brand      : theme.border,
+                          borderWidth:     isBeingEdited ? 1 : 0.5,
+                        },
+                      ]}
                     >
-                      <Ionicons name="close-circle" size={18} color={theme.danger} />
-                    </TouchableOpacity>
-                  </View>
-                ))}
+                      <TouchableOpacity
+                        style={styles.specChipTexts}
+                        onPress={() => handleStartEditSpec(spec)}
+                        activeOpacity={0.7}
+                      >
+                        <Text style={[styles.specChipKey, { color: theme.brand }]}>{spec.key}:</Text>
+                        <Text style={[styles.specChipVal, { color: theme.text }]}>{spec.value}</Text>
+                        <Ionicons name="pencil-outline" size={13} color={theme.textMuted} />
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        onPress={() => handleRemoveSpecNode(spec.key)}
+                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                      >
+                        <Ionicons name="close-circle" size={18} color={theme.danger} />
+                      </TouchableOpacity>
+                    </View>
+                  );
+                })}
               </View>
             )}
           </View>
 
-          <CustomButton label={isEditing ? "💾  Guardar cambios" : "💾  Guardar ficha"} onPress={handleSave} />
+          <CustomButton
+            label={isEditing ? "💾  Guardar cambios" : "💾  Guardar ficha"}
+            onPress={handleSave}
+            loading={submitting}
+            disabled={submitting}
+          />
           <CustomButton
             label={navigation.canGoBack() ? "Cancelar" : "Limpiar formulario"}
             onPress={() => (navigation.canGoBack() ? navigation.goBack() : resetForm())}
             variant="secondary"
+            disabled={submitting}
           />
         </ScrollView>
       </KeyboardAvoidingView>
@@ -348,6 +450,12 @@ const styles = StyleSheet.create({
   specInputHalf: {
     flex: 1,
   },
+  specActionsRow: {
+    flexDirection: "row",
+    gap: 8,
+    alignItems: "center",
+    marginBottom: 12,
+  },
   addSpecBtn: {
     flexDirection: "row",
     alignItems: "center",
@@ -358,11 +466,23 @@ const styles = StyleSheet.create({
     borderWidth: 0.75,
     borderStyle: "dashed",
     marginTop: 4,
-    marginBottom: 12,
   },
   addSpecBtnText: {
     fontSize: 13,
     fontWeight: "600",
+  },
+  cancelSpecBtn: {
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderRadius: 10,
+    borderWidth: 0.75,
+    marginTop: 4,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  cancelSpecBtnText: {
+    fontSize: 13,
+    fontWeight: "500",
   },
   specsListWrap: {
     gap: 6,

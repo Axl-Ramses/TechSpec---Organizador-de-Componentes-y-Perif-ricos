@@ -144,4 +144,26 @@ export class Stack<T> {
 
     return false;
   }
+
+  /**
+   * Reemplaza el dato del primer nodo que coincida con el predicado,
+   * conservando la posición e integridad de la pila.
+   * Complejidad: O(n)
+   * @param predicate Condición para identificar el elemento a actualizar
+   * @param newData Nuevo valor a asignar al nodo
+   * @returns true si se actualizó el nodo, false si no se encontró
+   */
+  public replaceIf(predicate: (item: T) => boolean, newData: T): boolean {
+    let current = this.top;
+
+    while (current !== null) {
+      if (predicate(current.data)) {
+        current.data = newData;
+        return true;
+      }
+      current = current.next;
+    }
+
+    return false;
+  }
 }

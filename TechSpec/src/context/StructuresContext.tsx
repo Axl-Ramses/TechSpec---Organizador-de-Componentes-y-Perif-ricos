@@ -28,6 +28,9 @@ interface StructuresContextType {
   removeFromComparison: (id: string) => void;
   clearComparison: () => void;
 
+  // ── Sincronización al editar componentes ──
+  updateComponentInStructures: (component: HardwareComponent) => void;
+
   // ── Fábrica / Utilidades de Listas Enlazadas ──
   createComponentsLinkedList: (items: HardwareComponent[]) => LinkedList<HardwareComponent>;
   createSpecsLinkedList: (specs: Spec[]) => LinkedList<Spec>;
@@ -135,6 +138,21 @@ export function StructuresProvider({ children }: { children: React.ReactNode }) 
     setComparisonQueue([]);
   };
 
+  // ── Sincronización al editar componentes ──
+  const updateComponentInStructures = (component: HardwareComponent) => {
+    // Si el componente editado está en la Pila LIFO de vistos recientemente, actualizamos sus datos
+    const stack = historyStackRef.current;
+    if (stack.replaceIf(c => c.id === component.id, component)) {
+      setRecentlyViewed(stack.toArray());
+    }
+
+    // Si el componente editado está en la Cola FIFO de comparación, actualizamos sus datos
+    const queue = comparisonQueueRef.current;
+    if (queue.replaceIf(c => c.id === component.id, component)) {
+      setComparisonQueue(queue.toArray());
+    }
+  };
+
   // ── Operaciones con Listas Enlazadas ──
   const createComponentsLinkedList = (items: HardwareComponent[]): LinkedList<HardwareComponent> => {
     return LinkedList.fromArray(items);
@@ -166,6 +184,8 @@ export function StructuresProvider({ children }: { children: React.ReactNode }) 
     dequeueFromComparison,
     removeFromComparison,
     clearComparison,
+
+    updateComponentInStructures,
 
     createComponentsLinkedList,
     createSpecsLinkedList,

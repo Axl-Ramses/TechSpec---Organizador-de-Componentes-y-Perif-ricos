@@ -79,6 +79,27 @@ export class LinkedList<T> {
   }
 
   /**
+   * Actualiza el primer elemento que cumpla con el predicado.
+   * Complejidad: O(n)
+   * @param predicate Función de condición para ubicar el nodo
+   * @param newData Nuevos datos a asignar al nodo
+   * @returns true si se encontró y actualizó el nodo, false en caso contrario
+   */
+  public update(predicate: (item: T) => boolean, newData: T): boolean {
+    let current = this.head;
+
+    while (current !== null) {
+      if (predicate(current.data)) {
+        current.data = newData;
+        return true;
+      }
+      current = current.next;
+    }
+
+    return false;
+  }
+
+  /**
    * Elimina el primer elemento que cumpla con el predicado.
    * Complejidad: O(n)
    * @param predicate Función que identifica al elemento a eliminar
